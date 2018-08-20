@@ -345,32 +345,6 @@ int main(int argc, char* argv[]) {
                 steering->setWheelSpeed(0.15, 0.15);
             }
 
-            /*if (scan[minIdx].getDistance() <= 1.0) { 
-                if (minIdx < scan.size()/2) {
-                    steering->setWheelSpeed(0.05, 0.2);
-                    if (lastDir == 2) {
-                        if (maxIdx < 190 && maxIdx > 170) {
-                            steering->turn(PI / 2.0);
-                        }
-                    }
-                    // turn left
-                    lastDir = 1;
-                } else {
-                    steering->setWheelSpeed(0.2, 0.05);
-                    if (lastDir == 1) {
-                        if (maxIdx < 190 && maxIdx > 170) {
-                            steering->turn(PI / 2.0);
-                        }
-                    }
-                    // turn right
-                    lastDir = 2;
-                }
-            } else {
-                steering->setWheelSpeed(0.15, 0.15);
-                lastDir = 0;
-            }*/
-
-
             scanWindow->update();
             mapWindow->update();
             if (vrWindow)

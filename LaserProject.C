@@ -36,7 +36,7 @@ Log log_("main");
 
 bool terminate_ = false;
 
-bool autoStop = true;
+bool autoStop = false;
 
 //
 // This signal handler function is called when the process receives the SIGINT
@@ -93,7 +93,6 @@ void Histogram::draw(display::Graphics &graphics) {
     graphics.fillCircle( Vector<double>(400,200), pointRadius,
             display::Graphics::SCALE_ABSOLUTE );
 }
-
 
 //
 // Main function
@@ -293,7 +292,6 @@ int main(int argc, char* argv[]) {
         // - retrieves scan data from the Scanner object
         // - updates the displays
         //
-        int lastDir = 0;
         while (!terminate_) {
             //
             //
@@ -305,10 +303,49 @@ int main(int argc, char* argv[]) {
             //
             //
             scanner->scan(scan);
-            //TODO SLEEP
+
             unsigned int minIdx = scan.getMin().first;
-            unsigned int maxIdx = scan.getMax().first;
-            if (scan[minIdx].getDistance() <= 1.0) { 
+            float minDist = 0.7;
+            int left = 0, right = 0, front = 0;
+            int scanSize3 = scan.size()/3;
+            for (int i=0; i < scanSize3; ++i) {
+                if (!scan[i].isValid()) // Skip invalid points
+                    continue;
+                if (scan[i].getDistance() <= minDist) {
+                    right++;
+                }
+                if (scan[i + scanSize3].getDistance() <= minDist) {
+                    front++;
+                }
+                if (scan[i + 2 * scanSize3].getDistance() <= minDist) {
+                    left++;
+                }
+            }
+
+            if (front > 5) {
+                if (abs(right - left) < 5) {
+                    if (right < 5) {
+                        steering->setWheelSpeed(0.2, 0.0);
+                    } else {
+                        steering->turn(PI);
+                    }
+                } else if (right > left) {
+                    steering->setWheelSpeed(0.0, 0.2);
+                } else if (left > right) {
+                    steering->setWheelSpeed(0.2, 0.0);
+                } 
+            } else if (scan[minIdx].getDistance() <= minDist) { 
+                if (minIdx < scan.size()/2) {
+                    steering->setWheelSpeed(0.1, 0.2);
+                } else {
+                    steering->setWheelSpeed(0.2, 0.1);
+                }
+            } 
+            else {
+                steering->setWheelSpeed(0.15, 0.15);
+            }
+
+            /*if (scan[minIdx].getDistance() <= 1.0) { 
                 if (minIdx < scan.size()/2) {
                     steering->setWheelSpeed(0.05, 0.2);
                     if (lastDir == 2) {
@@ -331,7 +368,7 @@ int main(int argc, char* argv[]) {
             } else {
                 steering->setWheelSpeed(0.15, 0.15);
                 lastDir = 0;
-            }
+            }*/
 
 
             scanWindow->update();

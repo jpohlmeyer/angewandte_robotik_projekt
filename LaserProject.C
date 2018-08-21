@@ -77,21 +77,29 @@ ns_matrix::MultOpt<double> ns_matrix::Matrix<double>::multOpt = ns_matrix::MultO
 class Histogram : public display::Displayable
 {
     public:
-        Histogram( double pointRadius ) { this->pointRadius = pointRadius; }
+        Histogram(double pointR) {}
         virtual ~Histogram() {}
+
+        //virtual void setBins(int bins[]);
 
     private:
         virtual void draw(display::Graphics &graphics);
 
-        double pointRadius;
+        //int bins[];
+        
 };
+
+/*void Histogram::setBins(int bins[]) {
+    this->bins = bins;
+}*/
 
 void Histogram::draw(display::Graphics &graphics) {
     display::Color drawCol( 1.0, 0.5, 0.0 );
 
     graphics.setColor( drawCol );
-    graphics.fillCircle( Vector<double>(400,200), pointRadius,
-            display::Graphics::SCALE_ABSOLUTE );
+    /*for (int i=0; i<bins.size(); ++i) {
+        graphics.drawBox( Rectangle( Vector<double>(i*10,bins[]), Vector<double>(i*10+10,0)));
+    }*/
 }
 
 //
@@ -138,9 +146,9 @@ int main(int argc, char* argv[]) {
         scanner = temp;
     } else if (string(argv[1]) == "vr") {
         VRScanner* temp = new VRScanner();
-
         temp->setSize(361);
 
+        temp->setNoiseEnabled(false);
         scanner = temp;
     } else {
         log_ << Log::ERROR << "unrecognized scanner implementation" << endl;
@@ -180,7 +188,7 @@ int main(int argc, char* argv[]) {
     ScanData scan;
     Map map;
     Indicator indicator;
-    Histogram histogram( 5 );
+    Histogram histogram(5);
 
     //
     // We use some displays to show these data objects. The \a vrWindow display
@@ -344,6 +352,25 @@ int main(int argc, char* argv[]) {
             else {
                 steering->setWheelSpeed(0.15, 0.15);
             }
+
+            double angle;
+            int bin = 50;
+            int hist[bin];
+            for (int i=0; i < bin; ++i) {
+                hist[i] = 0;
+            }
+            for (unsigned int i=0; i < scan.size()-1; ++i) {
+                if (scan[i].isValid() && scan[i+1].isValid()) {
+                    angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
+                    int j = ((int) ((angle+180)/(360.0/bin)));
+                    hist[j] = hist[j] + 1;
+                }
+            }
+
+            for (int i = 0; i < bin; ++i) {
+                std::cout<<"bin "<<i<<" : "<<hist[i]<<endl;
+            }
+            //histogram->setBins(hist);
 
             scanWindow->update();
             mapWindow->update();

@@ -26,6 +26,13 @@
 
 #include <ScannerMapFull.H>
 
+#include <KeyInput.H>
+
+
+#define BINCOUNT 250
+
+#define SEARCHDEGREE 15.0
+
 using namespace std;
 
 using namespace tools;
@@ -77,29 +84,31 @@ ns_matrix::MultOpt<double> ns_matrix::Matrix<double>::multOpt = ns_matrix::MultO
 class Histogram : public display::Displayable
 {
     public:
-        Histogram(double pointR) {}
+        Histogram(display::Color drawCol) { this->drawCol = drawCol; }
         virtual ~Histogram() {}
 
         //virtual void setBins(int bins[]);
+        double bins[BINCOUNT];
 
     private:
         virtual void draw(display::Graphics &graphics);
 
+        display::Color drawCol;
         //int bins[];
-        
+
 };
 
 /*void Histogram::setBins(int bins[]) {
-    this->bins = bins;
-}*/
+  this->bins = bins;
+  }*/
 
 void Histogram::draw(display::Graphics &graphics) {
-    display::Color drawCol( 1.0, 0.5, 0.0 );
 
     graphics.setColor( drawCol );
-    /*for (int i=0; i<bins.size(); ++i) {
-        graphics.drawBox( Rectangle( Vector<double>(i*10,bins[]), Vector<double>(i*10+10,0)));
-    }*/
+    for (int i=0; i<BINCOUNT; ++i) {
+        graphics.fillCircle( Vector<double>((i*(500.0/BINCOUNT))+(250.0/BINCOUNT),bins[i]), 250.0/BINCOUNT, display::Graphics::SCALE_ABSOLUTE );
+
+    }
 }
 
 //
@@ -168,7 +177,7 @@ int main(int argc, char* argv[]) {
         VRSteering* temp = new VRSteering();
 
         temp->setVRWorldFile("labor.vr");
-        temp->setPose(Pose(1.0, -3.0, 0.0));
+        temp->setPose(Pose(1.0, -3.0, 1.35));
 
         steering = temp;
     } else {
@@ -186,9 +195,15 @@ int main(int argc, char* argv[]) {
     // - histogram: An example histogram.
     //
     ScanData scan;
+    ScanData oldScan;
     Map map;
     Indicator indicator;
-    Histogram histogram(5);
+    display::Color drawCol( 1.0, 0.5, 0.0 );
+    Histogram histogram(drawCol);
+    display::Color drawColOld( 0.5, 1.0, 0.0 );
+    Histogram histogramOld(drawColOld);
+    display::Color drawColCor( 0.0, 0.5, 1.0 );
+    Histogram histogramCor(drawColCor);
 
     //
     // We use some displays to show these data objects. The \a vrWindow display
@@ -232,8 +247,14 @@ int main(int argc, char* argv[]) {
                 string("Histogram Window"), 500, 300);
 
         display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
+        display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
+        display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
         histItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemOld.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemCor.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
         histItem.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        histItemOld.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        histItemCor.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
 
         //
         // If the \a vr implementations are used, we add a third display showing
@@ -278,6 +299,7 @@ int main(int argc, char* argv[]) {
     // If anything goes wrong in the main loop below, the exception handler
     // should cleanup the mess.
     //
+
     try {
         //
         // Please do not disable this function unless you can be certain that
@@ -300,6 +322,28 @@ int main(int argc, char* argv[]) {
         // - retrieves scan data from the Scanner object
         // - updates the displays
         //
+        scanner->scan(scan);
+        ScanData obstacles = scan;
+        //map.integrate(scan);
+        double oldHist[BINCOUNT];
+
+        double angle;
+        for (int i=0; i < BINCOUNT; ++i) {
+            oldHist[i] = 0;
+        }
+        for (unsigned int i=0; i < scan.size()-1; ++i) {
+            if (scan[i].isValid() && scan[i+1].isValid()) {
+                angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
+                int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
+                oldHist[j] = oldHist[j] + 1;
+            }
+        }
+
+        Pose odom = steering->getPosition();
+        Pose oldPos;
+        double rotationOffset = 0;
+
+        int count = 0;
         while (!terminate_) {
             //
             //
@@ -310,67 +354,143 @@ int main(int argc, char* argv[]) {
             //
             //
             //
-            scanner->scan(scan);
+            //
 
-            unsigned int minIdx = scan.getMin().first;
-            float minDist = 0.7;
-            int left = 0, right = 0, front = 0;
-            int scanSize3 = scan.size()/3;
-            for (int i=0; i < scanSize3; ++i) {
-                if (!scan[i].isValid()) // Skip invalid points
-                    continue;
-                if (scan[i].getDistance() <= minDist) {
-                    right++;
-                }
-                if (scan[i + scanSize3].getDistance() <= minDist) {
-                    front++;
-                }
-                if (scan[i + 2 * scanSize3].getDistance() <= minDist) {
-                    left++;
-                }
-            }
 
-            if (front > 5) {
-                if (abs(right - left) < 5) {
-                    if (right < 5) {
-                        steering->setWheelSpeed(0.2, 0.0);
-                    } else {
-                        steering->turn(PI);
+            scanner->scan(obstacles);
+
+            /*unsigned int minIdx = obstacles.getMin().first;
+              float minDist = 0.7;
+              int left = 0, right = 0, front = 0;
+              int scanSize3 = obstacles.size()/3;
+              for (int i=0; i < scanSize3; ++i) {
+              if (!obstacles[i].isValid()) // Skip invalid points
+              continue;
+              if (obstacles[i].getDistance() <= minDist) {
+              right++;
+              }
+              if (obstacles[i + scanSize3].getDistance() <= minDist) {
+              front++;
+              }
+              if (obstacles[i + 2 * scanSize3].getDistance() <= minDist) {
+              left++;
+              }
+              }
+
+              if (front > 5) {
+              if (abs(right - left) < 5) {
+              if (right < 5) {
+              steering->setWheelSpeed(0.2, 0.0);
+              } else {
+              steering->turn(PI);
+              }
+              } else if (right > left) {
+              steering->setWheelSpeed(0.0, 0.2);
+              } else if (left > right) {
+              steering->setWheelSpeed(0.2, 0.0);
+              } 
+              } else if (obstacles[minIdx].getDistance() <= minDist) { 
+              if (minIdx < scan.size()/2) {
+              steering->setWheelSpeed(0.1, 0.2);
+              } else {
+              steering->setWheelSpeed(0.2, 0.1);
+              }
+              } 
+              else {
+              steering->setWheelSpeed(0.15, 0.15);
+              }*/
+
+            steering->setWheelSpeed(0.15, -0.15);
+
+            if (count % 10 == 0) {
+                oldPos = odom;
+                odom = steering->getPosition();
+                oldScan = scan;
+                scanner->scan(scan);
+
+                double hist[BINCOUNT];
+                for (int i=0; i < BINCOUNT; ++i) {
+                    hist[i] = 0;
+                }
+                for (unsigned int i=0; i < scan.size()-1; ++i) {
+                    if (scan[i].isValid() && scan[i+1].isValid()) {
+                        angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
+                        int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
+                        hist[j] = hist[j] + 1;
                     }
-                } else if (right > left) {
-                    steering->setWheelSpeed(0.0, 0.2);
-                } else if (left > right) {
-                    steering->setWheelSpeed(0.2, 0.0);
-                } 
-            } else if (scan[minIdx].getDistance() <= minDist) { 
-                if (minIdx < scan.size()/2) {
-                    steering->setWheelSpeed(0.1, 0.2);
+                }
+
+                double corr[BINCOUNT];
+                double maxCor = 0;
+                for (int j = 0; j < BINCOUNT; ++j) {
+                    corr[j] = 0;
+                    for (int i = 0; i < BINCOUNT; ++i) {
+                        corr[j] = corr[j] + oldHist[i] * hist[(i+j) % BINCOUNT];
+                    }
+                    if (corr[j] > maxCor) {
+                        maxCor = corr[j];
+                    }
+                }
+
+                int maxI = 0;
+                int maxHist = 0;
+                for (int i = 0; i < BINCOUNT; ++i) {
+                    histogram.bins[i] = hist[i];
+                    histogramOld.bins[i] = oldHist[i];
+                    histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
+                    oldHist[i] = hist[i];
+                    if (hist[i] > maxHist) {
+                        maxHist = hist[i];
+                        maxI = i;
+                    }
+                    //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
+                }
+
+
+                //odometrie getPosition() function search around this position for local max 
+                double turnRad = odom.getOrientation() - oldPos.getOrientation();
+                if (turnRad < 0) {
+                    turnRad = 2.0 * PI + turnRad;
+                }
+                double turn = turnRad * 180 / PI;
+                int searchPointIdx = (int) ((360.0-turn)/(360.0/BINCOUNT));
+
+                int binsFromDegree = (int) (SEARCHDEGREE/(360.0/BINCOUNT));
+                int corrMax = 0;
+                double corrMaxVal = 0;
+                for(int i = 0; i < binsFromDegree; ++i) {
+                    if (corr[(searchPointIdx - i + BINCOUNT)%BINCOUNT] > corrMaxVal) {
+                        corrMax = -i;
+                        corrMaxVal = corr[(searchPointIdx - i + BINCOUNT)%BINCOUNT];
+                    } 
+                    if (corr[(searchPointIdx+i)%BINCOUNT] > corrMaxVal) {
+                        corrMax = i;
+                        corrMaxVal = corr[(searchPointIdx + i)%BINCOUNT];
+                    }
+                }
+
+                searchPointIdx = (searchPointIdx + corrMax + BINCOUNT)%BINCOUNT;
+
+                turnRad = 2.0*PI-((searchPointIdx*(360.0/BINCOUNT))*PI/180.0);
+
+                // TODO: Bin skala 0 grad in der mitte? ein bisschen schief :(
+                if (count == 0) {
+                    rotationOffset = -((maxI * 360.0) / BINCOUNT);
+                    std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
                 } else {
-                    steering->setWheelSpeed(0.2, 0.1);
+                    rotationOffset = rotationOffset + turnRad;
                 }
-            } 
-            else {
-                steering->setWheelSpeed(0.15, 0.15);
-            }
-
-            double angle;
-            int bin = 50;
-            int hist[bin];
-            for (int i=0; i < bin; ++i) {
-                hist[i] = 0;
-            }
-            for (unsigned int i=0; i < scan.size()-1; ++i) {
-                if (scan[i].isValid() && scan[i+1].isValid()) {
-                    angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
-                    int j = ((int) ((angle+180)/(360.0/bin)));
-                    hist[j] = hist[j] + 1;
+                if (rotationOffset < 0) {
+                    rotationOffset = 2.0*PI + rotationOffset;
+                } else if (rotationOffset > 2.0*PI) {
+                    rotationOffset = rotationOffset - 2.0*PI;
                 }
-            }
 
-            for (int i = 0; i < bin; ++i) {
-                std::cout<<"bin "<<i<<" : "<<hist[i]<<endl;
+                std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
+
+                scan.rotate(rotationOffset);
+                map.integrate(scan); 
             }
-            //histogram->setBins(hist);
 
             scanWindow->update();
             mapWindow->update();
@@ -378,7 +498,11 @@ int main(int argc, char* argv[]) {
                 vrWindow->update();
             histWindow->update();
 
-            usleep(100000);
+            /*if (count == 0) {
+              waitKey(false);
+              }*/
+            count++;
+            //usleep(100000);
         }
     } catch (const Exception& exception) {
         log_ << Log::ERROR << "something went wrong: "

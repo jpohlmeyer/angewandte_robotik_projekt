@@ -33,6 +33,10 @@
 
 #define SEARCHDEGREE 15.0
 
+#define MAXLASERDIST 9.0
+
+#define SEARCHDIST 1
+
 using namespace std;
 
 using namespace tools;
@@ -177,7 +181,7 @@ int main(int argc, char* argv[]) {
         VRSteering* temp = new VRSteering();
 
         temp->setVRWorldFile("labor.vr");
-        temp->setPose(Pose(1.0, -3.0, 0.35));
+        temp->setPose(Pose(1.0, -3.0, 0.0));
 
         steering = temp;
     } else {
@@ -204,6 +208,8 @@ int main(int argc, char* argv[]) {
     Histogram histogramOld(drawColOld);
     display::Color drawColCor( 0.0, 0.5, 1.0 );
     Histogram histogramCor(drawColCor);
+    display::Color drawColX( 0.0, 0.5, 1.0 );
+    Histogram histogramX(drawColX);
 
     //
     // We use some displays to show these data objects. The \a vrWindow display
@@ -237,8 +243,8 @@ int main(int argc, char* argv[]) {
         display::Display::DisplayItem& mapItem = mapWindow->add(map, "map");
         mapItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
 
-        display::Display::DisplayItem& robotItem = mapWindow->add(indicator, "robot");
-        robotItem.synchronizeTo(&mapItem);
+        //display::Display::DisplayItem& robotItem = mapWindow->add(indicator, "robot");
+        //robotItem.synchronizeTo(&mapItem);
 
         //
         // Histogram window
@@ -246,15 +252,18 @@ int main(int argc, char* argv[]) {
         histWindow = display::Display::getFactory().createInst("video_window",
                 string("Histogram Window"), 500, 300);
 
-        display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
-        display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
-        display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
+        display::Display::DisplayItem& histItem = histWindow->add(histogramX, "histogramX");
         histItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
-        histItemOld.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
-        histItemCor.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
         histItem.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        histItemOld.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        histItemCor.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        //display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
+        //display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
+        //display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
+        //histItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        //histItemOld.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        //histItemCor.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        //histItem.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        //histItemOld.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        //histItemCor.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
 
         //
         // If the \a vr implementations are used, we add a third display showing
@@ -326,10 +335,15 @@ int main(int argc, char* argv[]) {
         //map.integrate(scan);
         ScanData obstacles = scan;
         double oldHist[BINCOUNT];
+        int oldHistX[BINCOUNT];
+        int oldHistY[2*BINCOUNT];
+
 
         double angle;
         for (int i=0; i < BINCOUNT; ++i) {
             oldHist[i] = 0;
+            oldHistX[i] = 0;
+            oldHistY[i] = 0;
         }
 
         for (unsigned int i=0; i < scan.size()-1; ++i) {
@@ -348,9 +362,9 @@ int main(int argc, char* argv[]) {
                 maxHist = oldHist[i];
                 maxI = i;
             }
-            //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
         }
 
+        // todo offset passt nicht :(
 
         double rotationOffset;
         if (maxI > BINCOUNT/2) {
@@ -362,11 +376,28 @@ int main(int argc, char* argv[]) {
         std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
 
         scan.rotate(rotationOffset);
+        for (unsigned int i = 0; i < scan.size(); ++i) {
+            if (scan[i].isValid()) {
+                int j = (int) (scan[i][0] * BINCOUNT / MAXLASERDIST);
+                oldHistX[j] = oldHistX[j]+1;
+                j = (int) (scan[i][1] * BINCOUNT / MAXLASERDIST) + BINCOUNT;
+                oldHistY[j] = oldHistY[j]+1;
+            }
+        }
+
+        /*for (int i = 0; i < BINCOUNT; ++i) {
+          cout<<"x "<<i<<" : "<<oldHistX[i]<<endl;
+          } 
+
+          for (int i = 0; i < 2*BINCOUNT; ++i) {
+          cout<<"y "<<i<<" : "<<oldHistY[i]<<endl;
+          }*/
+
+
         map.integrate(scan);
         mapWindow->update();
         histWindow->update();
         scanWindow->update();
-        waitKey(false);
         Pose odom = steering->getPosition();
         Pose oldPos;
 
@@ -427,17 +458,21 @@ int main(int argc, char* argv[]) {
               steering->setWheelSpeed(0.15, 0.15);
               }*/
 
-            steering->setWheelSpeed(0.15, -0.15);
+            steering->setWheelSpeed(0.15, 0.15);
 
-            if (count % 10 == 0) {
+            if (count % 1 == 0) {
                 oldPos = odom;
                 odom = steering->getPosition();
                 oldScan = scan;
                 scanner->scan(scan);
 
                 double hist[BINCOUNT];
+                int histX[BINCOUNT];
+                int histY[2*BINCOUNT];
                 for (int i=0; i < BINCOUNT; ++i) {
                     hist[i] = 0;
+                    histX[i] = 0;
+                    histY[i] = 0;
                 }
                 for (unsigned int i=0; i < scan.size()-1; ++i) {
                     if (scan[i].isValid() && scan[i+1].isValid()) {
@@ -467,7 +502,7 @@ int main(int argc, char* argv[]) {
                     //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
                 }
 
-
+                // rotation correction
                 //odometrie getPosition() function search around this position for local max 
                 double turnRad = odom.getOrientation() - oldPos.getOrientation();
                 if (turnRad < 0) {
@@ -479,6 +514,7 @@ int main(int argc, char* argv[]) {
                 int binsFromDegree = (int) (SEARCHDEGREE/(360.0/BINCOUNT));
                 int corrMax = 0;
                 double corrMaxVal = 0;
+                
                 for(int i = 0; i < binsFromDegree; ++i) {
                     if (corr[(searchPointIdx - i + BINCOUNT)%BINCOUNT] > corrMaxVal) {
                         corrMax = -i;
@@ -494,7 +530,6 @@ int main(int argc, char* argv[]) {
 
                 turnRad = 2.0*PI-((searchPointIdx*(360.0/BINCOUNT))*PI/180.0);
 
-                // TODO: Bin skala 0 grad in der mitte? ein bisschen schief :(
                 rotationOffset = rotationOffset + turnRad;
                 if (rotationOffset < 0) {
                     rotationOffset = 2.0*PI + rotationOffset;
@@ -505,6 +540,83 @@ int main(int argc, char* argv[]) {
                 std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
 
                 scan.rotate(rotationOffset);
+
+                for (unsigned int i = 0; i < scan.size(); ++i) {
+                    if (scan[i].isValid()) {
+                        int j = (int) (scan[i][0] * BINCOUNT / MAXLASERDIST);
+                        histX[j] = histX[j]+1;
+                        j = (int) (scan[i][1] * BINCOUNT / MAXLASERDIST) + BINCOUNT;
+                        histY[j] = histY[j]+1;
+                    }
+                }
+
+                // translation correction
+
+                double transX = odom.getX() - oldPos.getX();
+                double transY = odom.getY() - oldPos.getY();
+
+                int searchIdxX = ((int) ((-transX * BINCOUNT / MAXLASERDIST)+BINCOUNT))%BINCOUNT;
+                int searchIdxY = ((int) ((-transY * BINCOUNT / MAXLASERDIST)+BINCOUNT))%BINCOUNT;
+                
+                double corrX[BINCOUNT];
+                double corrY[2*BINCOUNT]; 
+
+                for (int j = 0; j < BINCOUNT; ++j) {
+                    corrX[j] = 0;
+                    for (int i = 0; i < BINCOUNT; ++i) {
+                        corrX[j] = corrX[j] + oldHistX[i] * histX[(i+j) % BINCOUNT];
+                    }
+                }
+
+                for (int j = 0; j < 2*BINCOUNT; ++j) {
+                    corrY[j] = 0;
+                    for (int i = 0; i < 2*BINCOUNT; ++i) {
+                        corrY[j] = corrY[j] + oldHistY[i] * histY[(i+j) % (2*BINCOUNT)];
+                    }
+                }
+
+                int binsFromTrans = (int) (SEARCHDIST/(MAXLASERDIST/BINCOUNT));
+                int corrMaxX = 0;
+                double corrMaxValX = 0;
+                int corrMaxY = 0;
+                double corrMaxValY = 0;
+                
+                for(int i = 0; i < binsFromTrans; ++i) {
+                    if (corrX[(searchIdxX - i + BINCOUNT)%BINCOUNT] > corrMaxValX) {
+                        corrMaxX = -i;
+                        corrMaxValX = corrX[(searchIdxX - i + BINCOUNT)%BINCOUNT];
+                    } 
+                    if (corrX[(searchIdxX+i)%BINCOUNT] > corrMaxValX) {
+                        corrMaxX = i;
+                        corrMaxValX = corr[(searchIdxX + i)%BINCOUNT];
+                    }
+                    if (corrY[(searchIdxY - i + 2*BINCOUNT)%(2*BINCOUNT)] > corrMaxValY) {
+                        corrMaxY = -i;
+                        corrMaxValY = corrY[(searchIdxY - i + 2*BINCOUNT)%(2*BINCOUNT)];
+                    } 
+                    if (corrY[(searchIdxY+i)%(2*BINCOUNT)] > corrMaxValY) {
+                        corrMaxY = i;
+                        corrMaxValY = corr[(searchIdxY + i)%(2*BINCOUNT)];
+                    }
+
+                }
+
+                transX = (searchIdxX + corrMaxX) * MAXLASERDIST / BINCOUNT;
+                transY = (searchIdxY + corrMaxY) * MAXLASERDIST / BINCOUNT;
+               
+                cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<endl;
+                scan.translate(transX, transY);
+                //scan.translate(1, searchIdxY);
+
+                for (int i = 0; i < BINCOUNT; ++i) {
+                    oldHistX[i] = histX[i];
+                    oldHistY[i] = histY[i];
+                    oldHistY[2*i] = histY[2*i];
+                    histogramX.bins[i] = histX[i];
+                }
+
+
+
                 map.integrate(scan); 
             }
 
@@ -514,9 +626,9 @@ int main(int argc, char* argv[]) {
                 vrWindow->update();
             histWindow->update();
 
-            /*if (count == 0) {
+            //if (count == 0) {
               waitKey(false);
-              }*/
+             // }
             count++;
             //usleep(100000);
         }

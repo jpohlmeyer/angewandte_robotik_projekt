@@ -29,7 +29,7 @@
 #include <KeyInput.H>
 
 
-#define BINCOUNT 250
+#define BINCOUNT 275
 
 #define SEARCHDEGREE 15.0
 
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
         VRSteering* temp = new VRSteering();
 
         temp->setVRWorldFile("labor.vr");
-        temp->setPose(Pose(1.0, -3.0, 1.35));
+        temp->setPose(Pose(1.0, -3.0, 0.35));
 
         steering = temp;
     } else {
@@ -323,14 +323,15 @@ int main(int argc, char* argv[]) {
         // - updates the displays
         //
         scanner->scan(scan);
-        ScanData obstacles = scan;
         //map.integrate(scan);
+        ScanData obstacles = scan;
         double oldHist[BINCOUNT];
 
         double angle;
         for (int i=0; i < BINCOUNT; ++i) {
             oldHist[i] = 0;
         }
+
         for (unsigned int i=0; i < scan.size()-1; ++i) {
             if (scan[i].isValid() && scan[i+1].isValid()) {
                 angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
@@ -339,9 +340,35 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        int maxI = 0;
+        int maxHist = 0;
+        for (int i = 0; i < BINCOUNT; ++i) {
+            if (oldHist[i] > maxHist) {
+                histogramOld.bins[i] = oldHist[i];
+                maxHist = oldHist[i];
+                maxI = i;
+            }
+            //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
+        }
+
+
+        double rotationOffset;
+        if (maxI > BINCOUNT/2) {
+            rotationOffset = 2.0*PI-((((maxI-BINCOUNT/2) * 360.0) / BINCOUNT)*PI/180.0);
+        } else {
+            rotationOffset = (((BINCOUNT/2-maxI) * 360.0) / BINCOUNT)*PI/180.0;
+        }
+
+        std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
+
+        scan.rotate(rotationOffset);
+        map.integrate(scan);
+        mapWindow->update();
+        histWindow->update();
+        scanWindow->update();
+        waitKey(false);
         Pose odom = steering->getPosition();
         Pose oldPos;
-        double rotationOffset = 0;
 
         int count = 0;
         while (!terminate_) {
@@ -432,17 +459,11 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
-                int maxI = 0;
-                int maxHist = 0;
                 for (int i = 0; i < BINCOUNT; ++i) {
                     histogram.bins[i] = hist[i];
                     histogramOld.bins[i] = oldHist[i];
                     histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
                     oldHist[i] = hist[i];
-                    if (hist[i] > maxHist) {
-                        maxHist = hist[i];
-                        maxI = i;
-                    }
                     //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
                 }
 
@@ -474,12 +495,7 @@ int main(int argc, char* argv[]) {
                 turnRad = 2.0*PI-((searchPointIdx*(360.0/BINCOUNT))*PI/180.0);
 
                 // TODO: Bin skala 0 grad in der mitte? ein bisschen schief :(
-                if (count == 0) {
-                    rotationOffset = -((maxI * 360.0) / BINCOUNT);
-                    std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
-                } else {
-                    rotationOffset = rotationOffset + turnRad;
-                }
+                rotationOffset = rotationOffset + turnRad;
                 if (rotationOffset < 0) {
                     rotationOffset = 2.0*PI + rotationOffset;
                 } else if (rotationOffset > 2.0*PI) {

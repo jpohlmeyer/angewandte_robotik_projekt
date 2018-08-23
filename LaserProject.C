@@ -334,18 +334,21 @@ int main(int argc, char* argv[]) {
         scanner->scan(scan);
         //map.integrate(scan);
         ScanData obstacles = scan;
+
+        //old angle, x and y histograms
         double oldHist[BINCOUNT];
         int oldHistX[BINCOUNT];
         int oldHistY[2*BINCOUNT];
 
-
-        double angle;
+        //initialise histograms with zero
         for (int i=0; i < BINCOUNT; ++i) {
             oldHist[i] = 0;
             oldHistX[i] = 0;
             oldHistY[i] = 0;
         }
 
+        //calculate angle histogram
+        double angle;
         for (unsigned int i=0; i < scan.size()-1; ++i) {
             if (scan[i].isValid() && scan[i+1].isValid()) {
                 angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
@@ -354,6 +357,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        //calculate most common direction in angle histogram
         int maxI = 0;
         int maxHist = 0;
         for (int i = 0; i < BINCOUNT; ++i) {
@@ -364,8 +368,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // todo offset passt nicht :(
-
+        //calculat initial rotation offsett needet to aligne the map (most common direction) to the x ynd y axis
         double rotationOffset;
         if (maxI > BINCOUNT/2) {
             rotationOffset = 2.0*PI-((((maxI-BINCOUNT/2) * 360.0) / BINCOUNT)*PI/180.0);
@@ -375,7 +378,10 @@ int main(int argc, char* argv[]) {
 
         std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
 
+        //rotate initial scan so it is axis aligned
         scan.rotate(rotationOffset);
+
+        //calculate x and y histogram
         for (unsigned int i = 0; i < scan.size(); ++i) {
             if (scan[i].isValid()) {
                 int j = (int) (scan[i][0] * BINCOUNT / MAXLASERDIST);
@@ -393,30 +399,29 @@ int main(int argc, char* argv[]) {
           cout<<"y "<<i<<" : "<<oldHistY[i]<<endl;
           }*/
 
-
+        //integrate initial axis aligned scan, show  map and initial histogram and scan
         map.integrate(scan);
         mapWindow->update();
         histWindow->update();
         scanWindow->update();
+
+        //get current odom Position
         Pose odom = steering->getPosition();
         Pose oldPos;
 
+        //Counter to make map update only every couple of rounds
         int count = 0;
+        //main execution loop
         while (!terminate_) {
-            //
-            //
             //
             //if (!steering->didAutoStop())
             //steering->setWheelSpeed(0.15, 0.2);
-
-            //
-            //
-            //
             //
 
-
+            //get current scan for obstacle avoidance
             scanner->scan(obstacles);
 
+            //movement with obstacle avoidance
             /*unsigned int minIdx = obstacles.getMin().first;
               float minDist = 0.7;
               int left = 0, right = 0, front = 0;
@@ -458,14 +463,20 @@ int main(int argc, char* argv[]) {
               steering->setWheelSpeed(0.15, 0.15);
               }*/
 
+            //current test movement
             steering->setWheelSpeed(0.15, 0.15);
 
+            //sup execution loop responsible for map update
             if (count % 1 == 0) {
+                //save odom position from previous update step and get new odom pos
                 oldPos = odom;
                 odom = steering->getPosition();
-                oldScan = scan;
-                scanner->scan(scan);
 
+                //save scan from previous update step and get current scan
+                oldScan = scan;
+                scan = obstacles;
+
+                //set up and initialise current histograms with zero
                 double hist[BINCOUNT];
                 int histX[BINCOUNT];
                 int histY[2*BINCOUNT];
@@ -474,6 +485,8 @@ int main(int argc, char* argv[]) {
                     histX[i] = 0;
                     histY[i] = 0;
                 }
+
+                //calculate current angle histogram
                 for (unsigned int i=0; i < scan.size()-1; ++i) {
                     if (scan[i].isValid() && scan[i+1].isValid()) {
                         angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
@@ -482,6 +495,8 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
+                //calculate correlation between old and current angle histogram
+                //save max correlation
                 double corr[BINCOUNT];
                 double maxCor = 0;
                 for (int j = 0; j < BINCOUNT; ++j) {
@@ -494,6 +509,8 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
+                //set up info to draw histograms
+                //current angle hist becomes old angle hist
                 for (int i = 0; i < BINCOUNT; ++i) {
                     histogram.bins[i] = hist[i];
                     histogramOld.bins[i] = oldHist[i];
@@ -502,19 +519,23 @@ int main(int argc, char* argv[]) {
                     //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
                 }
 
-                // rotation correction
-                //odometrie getPosition() function search around this position for local max 
+                // ROTATION CORRECTION----------------------------------------------------------------------------------------
+                //get estimated orientation from odometrie as center for max correlation search
                 double turnRad = odom.getOrientation() - oldPos.getOrientation();
                 if (turnRad < 0) {
                     turnRad = 2.0 * PI + turnRad;
                 }
+                //translat to degrees
                 double turn = turnRad * 180 / PI;
+                //calculate bin that relates to estimated turn to search in 
                 int searchPointIdx = (int) ((360.0-turn)/(360.0/BINCOUNT));
 
+                //calculate how many bins to search around the estimated search bin
                 int binsFromDegree = (int) (SEARCHDEGREE/(360.0/BINCOUNT));
+                //search for max correlation around searchPointIdx
+                //save relative distance from bin with max from origin of search
                 int corrMax = 0;
                 double corrMaxVal = 0;
-                
                 for(int i = 0; i < binsFromDegree; ++i) {
                     if (corr[(searchPointIdx - i + BINCOUNT)%BINCOUNT] > corrMaxVal) {
                         corrMax = -i;
@@ -526,10 +547,12 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
+                //update searchPointIdx to idx with max corr
                 searchPointIdx = (searchPointIdx + corrMax + BINCOUNT)%BINCOUNT;
-
+                //calculate turn from bin with max corr in radiant
                 turnRad = 2.0*PI-((searchPointIdx*(360.0/BINCOUNT))*PI/180.0);
 
+                //add previous turns to get global rotation
                 rotationOffset = rotationOffset + turnRad;
                 if (rotationOffset < 0) {
                     rotationOffset = 2.0*PI + rotationOffset;
@@ -539,8 +562,11 @@ int main(int argc, char* argv[]) {
 
                 std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
 
+                //rotate scan to same orientation as previous scans
                 scan.rotate(rotationOffset);
 
+                // TRANSLATION CORRECTION-----------------------------------------------------------------------------------
+                //calculate x and y histograms
                 for (unsigned int i = 0; i < scan.size(); ++i) {
                     if (scan[i].isValid()) {
                         int j = (int) (scan[i][0] * BINCOUNT / MAXLASERDIST);
@@ -550,17 +576,18 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
-                // translation correction
-
+                //get relative movement in x and y direction
                 double transX = odom.getX() - oldPos.getX();
                 double transY = odom.getY() - oldPos.getY();
 
+                //TODO Understand
                 int searchIdxX = ((int) ((-transX * BINCOUNT / MAXLASERDIST)+BINCOUNT))%BINCOUNT;
                 int searchIdxY = ((int) ((-transY * BINCOUNT / MAXLASERDIST)+BINCOUNT))%BINCOUNT;
                 
                 double corrX[BINCOUNT];
                 double corrY[2*BINCOUNT]; 
-
+                
+                //calculate correlation in x histogram
                 for (int j = 0; j < BINCOUNT; ++j) {
                     corrX[j] = 0;
                     for (int i = 0; i < BINCOUNT; ++i) {
@@ -568,6 +595,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
+                //calculate correlation in y histogram
                 for (int j = 0; j < 2*BINCOUNT; ++j) {
                     corrY[j] = 0;
                     for (int i = 0; i < 2*BINCOUNT; ++i) {
@@ -575,12 +603,13 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
+                //calculate how many bins to search around estimated position
                 int binsFromTrans = (int) (SEARCHDIST/(MAXLASERDIST/BINCOUNT));
                 int corrMaxX = 0;
                 double corrMaxValX = 0;
                 int corrMaxY = 0;
                 double corrMaxValY = 0;
-                
+                //search max correalation around estimated position and save relative distance from search origen
                 for(int i = 0; i < binsFromTrans; ++i) {
                     if (corrX[(searchIdxX - i + BINCOUNT)%BINCOUNT] > corrMaxValX) {
                         corrMaxX = -i;
@@ -601,13 +630,17 @@ int main(int argc, char* argv[]) {
 
                 }
 
+                //
                 transX = (searchIdxX + corrMaxX) * MAXLASERDIST / BINCOUNT;
                 transY = (searchIdxY + corrMaxY) * MAXLASERDIST / BINCOUNT;
                
                 cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<endl;
+
+                //translate scan
                 scan.translate(transX, transY);
                 //scan.translate(1, searchIdxY);
 
+                //current histograms become old ones
                 for (int i = 0; i < BINCOUNT; ++i) {
                     oldHistX[i] = histX[i];
                     oldHistY[i] = histY[i];
@@ -615,11 +648,11 @@ int main(int argc, char* argv[]) {
                     histogramX.bins[i] = histX[i];
                 }
 
-
-
+                //integrate scan
                 map.integrate(scan); 
             }
 
+            //update all windows
             scanWindow->update();
             mapWindow->update();
             if (vrWindow)
@@ -656,7 +689,6 @@ int main(int argc, char* argv[]) {
     if (vrWindow)   delete vrWindow;
     if (histWindow) delete histWindow;
 
-    //
     //
     //
     return EXIT_SUCCESS;

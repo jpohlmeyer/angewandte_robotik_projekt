@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
         VRSteering* temp = new VRSteering();
 
         temp->setVRWorldFile("labor.vr");
-        temp->setPose(Pose(1.0, -3.0, PI/2.0));
+        temp->setPose(Pose(1.0, -3.0, 0.00));
         
 
         steering = temp;
@@ -214,16 +214,32 @@ int main(int argc, char* argv[]) {
     //Histogram histogramOld(drawColOld);
     display::Color drawColCor( 0.0, 0.5, 1.0 );
     //Histogram histogramCor(drawColCor);
-    display::Color drawColCorY( 1.0, 0.0, 0.0 );
-    double binsCorY[BINCOUNTDIST];
-    Histogram histogramCorY(drawColCorY,BINCOUNTDIST,&binsCorY[0]);
+    
+    display::Color drawColOldY( 0.0, 0.0, 1.0 );
+    double binsOldY[BINCOUNTDIST];
+    Histogram histogramOldY(drawColOldY,BINCOUNTDIST,&binsOldY[0]);
+    
     display::Color drawColY( 0.0, 1.0, 0.0 );
     double binsY[BINCOUNTDIST];
     Histogram histogramY(drawColY,BINCOUNTDIST,&binsY[0]);
-    display::Color drawColX( 0.0, 0.0, 1.0 );
+
+    display::Color drawColCorY( 1.0, 0.0, 0.0 );
+    double binsCorY[BINCOUNTDIST];
+    Histogram histogramCorY(drawColCorY,BINCOUNTDIST,&binsCorY[0]);
+
+
+    display::Color drawColOldX( 0.0, 0.0, 1.0 );
+    double binsOldX[BINCOUNTDIST];
+    Histogram histogramOldX(drawColOldX,BINCOUNTDIST,&binsOldX[0]);
+
+    display::Color drawColX( 0.0, 1.0, 0.0 );
     double binsX[BINCOUNTDIST];
     Histogram histogramX(drawColX,BINCOUNTDIST,&binsX[0]);
 
+    display::Color drawColCorX( 1.0, 0.0, 0.0 );
+    double binsCorX[BINCOUNTDIST];
+    Histogram histogramCorX(drawColCorX,BINCOUNTDIST,&binsCorX[0]);
+        
     //
     // We use some displays to show these data objects. The \a vrWindow display
     // is only useful when working with the \a vr implementations.
@@ -231,6 +247,8 @@ int main(int argc, char* argv[]) {
     display::Display* scanWindow = 0;
     display::Display* mapWindow = 0;
     display::Display* vrWindow = 0;
+    display::Display* histWindowX = 0;
+    display::Display* histWindowY = 0;
     display::Display* histWindow = 0;
 
     try {
@@ -264,17 +282,32 @@ int main(int argc, char* argv[]) {
         //
         histWindow = display::Display::getFactory().createInst("video_window",
                 string("Histogram Window"), 500, 300);
+        histWindowX = display::Display::getFactory().createInst("video_window",
+                string("HistogramX Window"), 500, 300);
+        histWindowY = display::Display::getFactory().createInst("video_window",
+                string("HistogramY Window"), 500, 300);
 
-        display::Display::DisplayItem& histItemX = histWindow->add(histogramX, "histogramX");
-        histItemX.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
-        histItemX.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        display::Display::DisplayItem& histItemCorY = histWindow->add(histogramCorY, "histogramCorY");
+        display::Display::DisplayItem& histItemCorY = histWindowY->add(histogramCorY, "histogramCorY");
         histItemCorY.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
         histItemCorY.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        display::Display::DisplayItem& histItemY = histWindow->add(histogramY, "histogramY");
+        display::Display::DisplayItem& histItemY = histWindowY->add(histogramY, "histogramY");
         histItemY.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
         histItemY.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-                //display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
+        display::Display::DisplayItem& histItemOldY = histWindowY->add(histogramOldY, "histogramOldY");
+        histItemOldY.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemOldY.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+
+        display::Display::DisplayItem& histItemX = histWindowX->add(histogramX, "histogramX");
+        histItemX.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemX.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        display::Display::DisplayItem& histItemOldX = histWindowX->add(histogramOldX, "histogramOldX");
+        histItemOldX.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemOldX.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        display::Display::DisplayItem& histItemCorX = histWindowX->add(histogramCorX, "histogramCorX");
+        histItemCorX.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemCorX.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        
+        //display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
         //display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
         //display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
         //histItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
@@ -314,6 +347,8 @@ int main(int argc, char* argv[]) {
         if (mapWindow)  delete mapWindow;
         if (vrWindow)   delete vrWindow;
         if (histWindow) delete histWindow;
+        if (histWindowY) delete histWindowY;
+        if (histWindowX) delete histWindowX;
 
         return EXIT_FAILURE;
     }
@@ -427,6 +462,8 @@ int main(int argc, char* argv[]) {
         map.integrate(scan);
         mapWindow->update();
         histWindow->update();
+        histWindowX->update();
+        histWindowY->update();
         scanWindow->update();
 
         //get current odom Position
@@ -667,7 +704,7 @@ int main(int argc, char* argv[]) {
                 
                 int maximumIdxX = (searchIdxX + corrMaxX + BINCOUNTDIST) % BINCOUNTDIST;
                 int maximumIdxY = (searchIdxY + corrMaxY + BINCOUNTDIST) % BINCOUNTDIST;
-
+/*
                 if (maximumIdxX < BINCOUNTDIST/2) {
                     transX = (maximumIdxX * MAXLASERDIST) / BINCOUNTDIST;
                 } else {
@@ -679,7 +716,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     transY = ((maximumIdxY - BINCOUNTDIST) * MAXLASERDIST) / BINCOUNTDIST;
                 }
-               
+  */             
                 cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
 
                 //multiply resulting translation vektor with rotation matrix to translate into global translation vektor
@@ -698,12 +735,16 @@ int main(int argc, char* argv[]) {
                 
                 //current histograms become old ones
                 for (int i = 0; i < BINCOUNTDIST; ++i) {
-                    oldHistX[i] = histX[i];
-                    oldHistY[i] = histY[i];
+                    histogramOldX.bins[i] = oldHistX[i];
                     histogramX.bins[i] = histX[i];
+                    histogramCorX.bins[i] = (((double) corrX[i])/corrMaxValX)*290;
+                    histogramOldY.bins[i] = oldHistY[i];
                     histogramY.bins[i] = histY[i];
                     histogramCorY.bins[i] = (((double) corrY[i])/corrMaxValY)*290;
+                    oldHistX[i] = histX[i];
+                    oldHistY[i] = histY[i];
                 }
+
 
                 //integrate scan
                 map.integrate(scan); 
@@ -715,6 +756,8 @@ int main(int argc, char* argv[]) {
             if (vrWindow)
                 vrWindow->update();
             histWindow->update();
+            histWindowX->update();
+            histWindowY->update();
 
             //if (count == 0) {
               waitKey(false);
@@ -732,6 +775,8 @@ int main(int argc, char* argv[]) {
         if (mapWindow)  delete mapWindow;
         if (vrWindow)   delete vrWindow;
         if (histWindow) delete histWindow;
+        if (histWindowY) delete histWindowY;
+        if (histWindowX) delete histWindowX;
 
         return EXIT_FAILURE;
     }
@@ -745,6 +790,8 @@ int main(int argc, char* argv[]) {
     if (mapWindow)  delete mapWindow;
     if (vrWindow)   delete vrWindow;
     if (histWindow) delete histWindow;
+    if (histWindowX) delete histWindowX;
+    if (histWindowY) delete histWindowY;
 
     //
     //

@@ -208,12 +208,25 @@ int main(int argc, char* argv[]) {
     ScanData oldScan;
     Map map;
     Indicator indicator;
-    display::Color drawCol( 1.0, 0.5, 0.0 );
+    //display::Color drawCol( 1.0, 0.5, 0.0 );
     //Histogram histogram(drawCol);
-    display::Color drawColOld( 0.5, 1.0, 0.0 );
+    //display::Color drawColOld( 0.5, 1.0, 0.0 );
     //Histogram histogramOld(drawColOld);
-    display::Color drawColCor( 0.0, 0.5, 1.0 );
+    //display::Color drawColCor( 0.0, 0.5, 1.0 );
     //Histogram histogramCor(drawColCor);
+
+    display::Color drawColOld( 0.0, 0.0, 1.0 );
+    double binsOld[BINCOUNT];
+    Histogram histogramOld(drawColOld,BINCOUNT,&binsOld[0]);
+
+    display::Color drawCol( 0.0, 1.0, 0.0 );
+    double bins[BINCOUNT];
+    Histogram histogram(drawCol,BINCOUNT,&bins[0]);
+
+    display::Color drawColCor( 1.0, 0.0, 0.0 );
+    double binsCor[BINCOUNT];
+    Histogram histogramCor(drawColCor,BINCOUNT,&binsCor[0]);
+
 
     display::Color drawColOldY( 0.0, 0.0, 1.0 );
     double binsOldY[BINCOUNTDIST];
@@ -307,15 +320,15 @@ int main(int argc, char* argv[]) {
         histItemCorX.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
         histItemCorX.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
 
-        //display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
-        //display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
-        //display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
-        //histItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
-        //histItemOld.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
-        //histItemCor.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
-        //histItem.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        //histItemOld.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        //histItemCor.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
+        display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
+        display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
+        histItem.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemOld.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItemCor.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
+        histItem.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        histItemOld.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
+        histItemCor.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
 
         //
         // If the \a vr implementations are used, we add a third display showing
@@ -419,7 +432,7 @@ int main(int argc, char* argv[]) {
         int maxHist = 0;
         for (int i = 0; i < BINCOUNT; ++i) {
             if (oldHist[i] > maxHist) {
-                //histogramOld.bins[i] = oldHist[i];
+                histogramOld.bins[i] = oldHist[i];
                 maxHist = oldHist[i];
                 maxI = i;
             }
@@ -577,9 +590,9 @@ int main(int argc, char* argv[]) {
                 //set up info to draw histograms
                 //current angle hist becomes old angle hist
                 for (int i = 0; i < BINCOUNT; ++i) {
-                    //histogram.bins[i] = hist[i];
-                    //histogramOld.bins[i] = oldHist[i];
-                    //histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
+                    histogram.bins[i] = hist[i];
+                    histogramOld.bins[i] = oldHist[i];
+                    histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
                     oldHist[i] = hist[i];
                     //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
                 }

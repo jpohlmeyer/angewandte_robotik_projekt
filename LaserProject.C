@@ -33,13 +33,15 @@
 
 #define BINCOUNT 275
 
-#define BINCOUNTDIST 650
+#define BINCOUNTDIST 400
 
 #define SEARCHDEGREE 15.0
 
 #define MAXLASERDIST 9.0
 
 #define SEARCHDIST 1.0
+
+#define ANGLENOISECOST 10
 
 using namespace std;
 
@@ -166,7 +168,9 @@ int main(int argc, char* argv[]) {
         VRScanner* temp = new VRScanner();
         temp->setSize(361);
 
-        temp->setNoiseEnabled(false);
+        temp->setNoiseConst(0.03);
+        //temp->setNoiseLinear(0.05);
+        temp->setNoiseEnabled(true);
         scanner = temp;
     } else {
         log_ << Log::ERROR << "unrecognized scanner implementation" << endl;
@@ -419,9 +423,9 @@ int main(int argc, char* argv[]) {
 
         //calculate angle histogram
         double angle;
-        for (unsigned int i=0; i < scan.size()-1; ++i) {
-            if (scan[i].isValid() && scan[i+1].isValid()) {
-                angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
+        for (unsigned int i=ANGLENOISECOST; i < scan.size()-ANGLENOISECOST; ++i) {
+            if (scan[i-ANGLENOISECOST].isValid() && scan[i+ANGLENOISECOST].isValid()) {
+                angle = atan2(scan[i-ANGLENOISECOST][1] - scan[i+ANGLENOISECOST][1], scan[i-ANGLENOISECOST][0] - scan[i+ANGLENOISECOST][0]) * 180 /PI;
                 int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
                 oldHist[j] = oldHist[j] + 1;
             }
@@ -565,9 +569,9 @@ int main(int argc, char* argv[]) {
                 }
 
                 //calculate current angle histogram
-                for (unsigned int i=0; i < scan.size()-1; ++i) {
-                    if (scan[i].isValid() && scan[i+1].isValid()) {
-                        angle = atan2(scan[i][1] - scan[i+1][1], scan[i][0] - scan[i+1][0]) * 180 /PI;
+                for (unsigned int i=ANGLENOISECOST; i < scan.size()-ANGLENOISECOST; ++i) {
+                    if (scan[i-ANGLENOISECOST].isValid() && scan[i+ANGLENOISECOST].isValid()) {
+                        angle = atan2(scan[i-ANGLENOISECOST][1] - scan[i+ANGLENOISECOST][1], scan[i-ANGLENOISECOST][0] - scan[i+ANGLENOISECOST][0]) * 180 /PI;
                         int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
                         hist[j] = hist[j] + 1;
                     }

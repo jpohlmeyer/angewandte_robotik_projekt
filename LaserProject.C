@@ -33,13 +33,13 @@
 
 #define BINCOUNT 275
 
-#define BINCOUNTDIST 550
+#define BINCOUNTDIST 650
 
 #define SEARCHDEGREE 15.0
 
 #define MAXLASERDIST 9.0
 
-#define SEARCHDIST 1
+#define SEARCHDIST 1.0
 
 using namespace std;
 
@@ -115,7 +115,7 @@ void Histogram::draw(display::Graphics &graphics) {
 
     graphics.setColor( drawCol );
     for (int i=0; i<bincount; ++i) {
-        graphics.fillCircle( Vector<double>((i*(500.0/bincount))+(250.0/bincount),bins[i]), 5*250.0/bincount, display::Graphics::SCALE_ABSOLUTE );
+        graphics.fillCircle( Vector<double>((i*(490.0/bincount))+(250.0/bincount),bins[i]), 5*250.0/bincount, display::Graphics::SCALE_ABSOLUTE );
 
     }
 }
@@ -186,8 +186,8 @@ int main(int argc, char* argv[]) {
         VRSteering* temp = new VRSteering();
 
         temp->setVRWorldFile("labor.vr");
-        temp->setPose(Pose(1.0, -3.0, 0.00));
-        
+        temp->setPose(Pose(1.0, -3.0, 0.0));
+
 
         steering = temp;
     } else {
@@ -214,11 +214,11 @@ int main(int argc, char* argv[]) {
     //Histogram histogramOld(drawColOld);
     display::Color drawColCor( 0.0, 0.5, 1.0 );
     //Histogram histogramCor(drawColCor);
-    
+
     display::Color drawColOldY( 0.0, 0.0, 1.0 );
     double binsOldY[BINCOUNTDIST];
     Histogram histogramOldY(drawColOldY,BINCOUNTDIST,&binsOldY[0]);
-    
+
     display::Color drawColY( 0.0, 1.0, 0.0 );
     double binsY[BINCOUNTDIST];
     Histogram histogramY(drawColY,BINCOUNTDIST,&binsY[0]);
@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
     display::Color drawColCorX( 1.0, 0.0, 0.0 );
     double binsCorX[BINCOUNTDIST];
     Histogram histogramCorX(drawColCorX,BINCOUNTDIST,&binsCorX[0]);
-        
+
     //
     // We use some displays to show these data objects. The \a vrWindow display
     // is only useful when working with the \a vr implementations.
@@ -306,7 +306,7 @@ int main(int argc, char* argv[]) {
         display::Display::DisplayItem& histItemCorX = histWindowX->add(histogramCorX, "histogramCorX");
         histItemCorX.setFlags(display::Display::DisplayItem::FLAG_NOSTRETCH);
         histItemCorX.setCoordBounds( Rectangle( 0, 0, 500, 300 ) );
-        
+
         //display::Display::DisplayItem& histItem = histWindow->add(histogram, "histogram");
         //display::Display::DisplayItem& histItemOld = histWindow->add(histogramOld, "histogramOld");
         //display::Display::DisplayItem& histItemCor = histWindow->add(histogramCor, "histogramCor");
@@ -450,13 +450,13 @@ int main(int argc, char* argv[]) {
             }
         }
 
-/*
-        for (int i = 0; i < BINCOUNTDIST; ++i) {
-          cout<<"initial x "<<i<<" : "<<oldHistX[i]<<endl;
-          } 
-          for (int i = 0; i < BINCOUNTDIST; ++i) {
-          cout<<"y "<<i<<" : "<<oldHistY[i]<<endl;
-          }*/
+        /*
+           for (int i = 0; i < BINCOUNTDIST; ++i) {
+           cout<<"initial x "<<i<<" : "<<oldHistX[i]<<endl;
+           } 
+           for (int i = 0; i < BINCOUNTDIST; ++i) {
+           cout<<"y "<<i<<" : "<<oldHistY[i]<<endl;
+           }*/
 
         //integrate initial axis aligned scan, show  map and initial histogram and scan
         map.integrate(scan);
@@ -483,53 +483,53 @@ int main(int argc, char* argv[]) {
             scanner->scan(obstacles);
 
             //movement with obstacle avoidance
-            /*unsigned int minIdx = obstacles.getMin().first;
-              float minDist = 0.7;
-              int left = 0, right = 0, front = 0;
-              int scanSize3 = obstacles.size()/3;
-              for (int i=0; i < scanSize3; ++i) {
-              if (!obstacles[i].isValid()) // Skip invalid points
-              continue;
-              if (obstacles[i].getDistance() <= minDist) {
-              right++;
-              }
-              if (obstacles[i + scanSize3].getDistance() <= minDist) {
-              front++;
-              }
-              if (obstacles[i + 2 * scanSize3].getDistance() <= minDist) {
-              left++;
-              }
-              }
+            unsigned int minIdx = obstacles.getMin().first;
+            float minDist = 0.7;
+            int left = 0, right = 0, front = 0;
+            int scanSize3 = obstacles.size()/3;
+            for (int i=0; i < scanSize3; ++i) {
+                if (!obstacles[i].isValid()) // Skip invalid points
+                    continue;
+                if (obstacles[i].getDistance() <= minDist) {
+                    right++;
+                }
+                if (obstacles[i + scanSize3].getDistance() <= minDist) {
+                    front++;
+                }
+                if (obstacles[i + 2 * scanSize3].getDistance() <= minDist) {
+                    left++;
+                }
+            }
 
-              if (front > 5) {
-              if (abs(right - left) < 5) {
-              if (right < 5) {
-              steering->setWheelSpeed(0.2, 0.0);
-              } else {
-              steering->turn(PI);
-              }
-              } else if (right > left) {
-              steering->setWheelSpeed(0.0, 0.2);
-              } else if (left > right) {
-              steering->setWheelSpeed(0.2, 0.0);
-              } 
-              } else if (obstacles[minIdx].getDistance() <= minDist) { 
-              if (minIdx < scan.size()/2) {
-              steering->setWheelSpeed(0.1, 0.2);
-              } else {
-              steering->setWheelSpeed(0.2, 0.1);
-              }
-              } 
-              else {
-              steering->setWheelSpeed(0.15, 0.15);
-              }*/
+            if (front > 5) {
+                if (abs(right - left) < 5) {
+                    if (right < 5) {
+                        steering->setWheelSpeed(0.2, 0.0);
+                    } else {
+                        steering->turn(PI);
+                    }
+                } else if (right > left) {
+                    steering->setWheelSpeed(0.0, 0.2);
+                } else if (left > right) {
+                    steering->setWheelSpeed(0.2, 0.0);
+                } 
+            } else if (obstacles[minIdx].getDistance() <= minDist) { 
+                if (minIdx < scan.size()/2) {
+                    steering->setWheelSpeed(0.1, 0.2);
+                } else {
+                    steering->setWheelSpeed(0.2, 0.1);
+                }
+            } 
+            else {
+                steering->setWheelSpeed(0.15, 0.15);
+            }
 
             //current test movement
-            //steering->setWheelSpeed(0.15, 0.15);
-            steering->move(0.5);
+            //steering->setWheelSpeed(0.15, 0.05);
+            //steering->move(0.5);
 
             //sup execution loop responsible for map update
-            if (count % 1 == 0) {
+            if (count % 5 == 0) {
                 //save odom position from previous update step and get new odom pos
                 oldPos = odom;
                 odom = steering->getPosition();
@@ -546,7 +546,7 @@ int main(int argc, char* argv[]) {
                 for (int i=0; i < BINCOUNT; ++i) {
                     hist[i] = 0;
                 }
-                 for (int i=0; i < BINCOUNTDIST; ++i) {
+                for (int i=0; i < BINCOUNTDIST; ++i) {
                     histX[i] = 0;
                     histY[i] = 0;
                 }
@@ -634,16 +634,16 @@ int main(int argc, char* argv[]) {
                 //calculate x and y histograms
                 for (unsigned int i = 0; i < scan.size(); ++i) {
                     if (scan[i].isValid()) {
-                        int j = (int) ((scan[i][0] * BINCOUNTDIST/2) / MAXLASERDIST) + (BINCOUNTDIST/2);
+                        int j = (int) ((scan[i][0] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
                         histX[j] = histX[j]+1;
-                        j = (int) ((scan[i][1] * BINCOUNTDIST/2) / MAXLASERDIST) + (BINCOUNTDIST/2);
+                        j = (int) ((scan[i][1] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
                         histY[j] = histY[j]+1;
                     }
                 }
-                
+
                 /*for (int i = 0; i < BINCOUNTDIST; ++i) {
-                    cout<<"count: "<<count<<" y "<<i<<" : "<<histY[i]<<endl;
-                }*/
+                  cout<<"count: "<<count<<" y "<<i<<" : "<<histY[i]<<endl;
+                  }*/
 
                 //get relative movement in x and y direction
                 double transXrobot = odom.getX() - oldPos.getX();
@@ -651,19 +651,21 @@ int main(int argc, char* argv[]) {
                 //multiply resulting translation vektor with rotation matrix to translate into global translation vektor
                 double transX = cos(rotationOffset) * transXrobot - sin(rotationOffset) * transYrobot;
                 double transY = sin(rotationOffset) * transXrobot + cos(rotationOffset) * transYrobot;
-               
+
 
 
                 cout<<"transXODOM: "<<transX<<" transYODOM: "<<transY<<endl;
 
                 //calculate index of bin for search in correlation
-                int searchIdxX = ((int) ((transX / (MAXLASERDIST / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
-                int searchIdxY = ((int) ((transY / (MAXLASERDIST / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
-                
+                int searchIdxX = ((int) ((-transX / ((2*MAXLASERDIST) / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
+                int searchIdxY = ((int) ((-transY / ((2*MAXLASERDIST) / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
+
                 double corrX[BINCOUNTDIST];
                 double corrY[BINCOUNTDIST]; 
-                
+
                 //calculate correlation in x and y histogram
+                double globalMaxCorX = 0;
+                double globalMaxCorY = 0;
                 for (int j = 0; j < BINCOUNTDIST; ++j) {
                     corrX[j] = 0;
                     corrY[j] = 0;
@@ -671,10 +673,17 @@ int main(int argc, char* argv[]) {
                         corrX[j] = corrX[j] + oldHistX[i] * histX[(i+j) % BINCOUNTDIST];
                         corrY[j] = corrY[j] + oldHistY[i] * histY[(i+j) % BINCOUNTDIST];
                     }
+                    if (corrX[j] > globalMaxCorX) {
+                        globalMaxCorX = corrX[j];
+                    }
+                    if (corrY[j] > globalMaxCorY) {
+                        globalMaxCorY = corrY[j];
+                    }
+
                 }
 
                 //calculate how many bins to search around estimated position
-                int binsFromTrans = (int) (SEARCHDIST/(MAXLASERDIST/BINCOUNTDIST));
+                int binsFromTrans = (int) (SEARCHDIST/((2*MAXLASERDIST)/BINCOUNTDIST));
                 int corrMaxX = 0;
                 double corrMaxValX = 0;
                 int corrMaxY = 0;
@@ -687,7 +696,7 @@ int main(int argc, char* argv[]) {
                     } 
                     if (corrX[(searchIdxX+i)%BINCOUNTDIST] > corrMaxValX) {
                         corrMaxX = i;
-                        corrMaxValX = corr[(searchIdxX + i)%BINCOUNTDIST];
+                        corrMaxValX = corrX[(searchIdxX + i)%BINCOUNTDIST];
                     }
                     if (corrY[(searchIdxY - i + BINCOUNTDIST)%BINCOUNTDIST] > corrMaxValY) {
                         corrMaxY = -i;
@@ -695,52 +704,52 @@ int main(int argc, char* argv[]) {
                     } 
                     if (corrY[(searchIdxY+i)%BINCOUNTDIST] > corrMaxValY) {
                         corrMaxY = i;
-                        corrMaxValY = corr[(searchIdxY + i)%BINCOUNTDIST];
+                        corrMaxValY = corrY[(searchIdxY + i)%BINCOUNTDIST];
                     }
 
                 }
 
                 //
-                
+
                 int maximumIdxX = (searchIdxX + corrMaxX + BINCOUNTDIST) % BINCOUNTDIST;
                 int maximumIdxY = (searchIdxY + corrMaxY + BINCOUNTDIST) % BINCOUNTDIST;
-/*
+
                 if (maximumIdxX < BINCOUNTDIST/2) {
-                    transX = (maximumIdxX * MAXLASERDIST) / BINCOUNTDIST;
+                    transX = -(maximumIdxX * 2 * MAXLASERDIST) / BINCOUNTDIST;
                 } else {
-                    transX = ((maximumIdxX - BINCOUNTDIST) * MAXLASERDIST) / BINCOUNTDIST;
+                    transX = ((BINCOUNTDIST - maximumIdxX) * 2 * MAXLASERDIST) / BINCOUNTDIST;
                 }
 
                 if (maximumIdxY < BINCOUNTDIST/2) {
-                    transY = (maximumIdxY * MAXLASERDIST) / BINCOUNTDIST;
+                    transY = -(maximumIdxY * 2 * MAXLASERDIST) / BINCOUNTDIST;
                 } else {
-                    transY = ((maximumIdxY - BINCOUNTDIST) * MAXLASERDIST) / BINCOUNTDIST;
+                    transY = ((BINCOUNTDIST - maximumIdxY) * 2 * MAXLASERDIST) / BINCOUNTDIST;
                 }
-  */             
+
                 cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
 
                 //multiply resulting translation vektor with rotation matrix to translate into global translation vektor
                 //double rotatedTransX = cos(rotationOffset) * transX - sin(rotationOffset) * transY;
                 //double rotatedTransY = sin(rotationOffset) * transX + cos(rotationOffset) * transY;
-               
+
 
                 transOffsetX = transOffsetX + transX;
                 transOffsetY = transOffsetY + transY;
-                
+
                 //translate scan
                 scan.translate(transOffsetX, transOffsetY);
                 //scan.translate(1, searchIdxY);
 
                 //cout<<"rottransX: "<<rotatedTransX<<" rottransY: "<<rotatedTransY<<endl;
-                
+
                 //current histograms become old ones
                 for (int i = 0; i < BINCOUNTDIST; ++i) {
                     histogramOldX.bins[i] = oldHistX[i];
                     histogramX.bins[i] = histX[i];
-                    histogramCorX.bins[i] = (((double) corrX[i])/corrMaxValX)*290;
+                    histogramCorX.bins[i] = (((double) corrX[i])/globalMaxCorX)*290;
                     histogramOldY.bins[i] = oldHistY[i];
                     histogramY.bins[i] = histY[i];
-                    histogramCorY.bins[i] = (((double) corrY[i])/corrMaxValY)*290;
+                    histogramCorY.bins[i] = (((double) corrY[i])/globalMaxCorY)*290;
                     oldHistX[i] = histX[i];
                     oldHistY[i] = histY[i];
                 }
@@ -760,8 +769,8 @@ int main(int argc, char* argv[]) {
             histWindowY->update();
 
             //if (count == 0) {
-              waitKey(false);
-             // }
+            //waitKey(false);
+            // }
             count++;
             //usleep(100000);
         }

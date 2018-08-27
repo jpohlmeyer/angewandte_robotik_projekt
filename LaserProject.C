@@ -30,10 +30,11 @@
 
 #include <math.h>
 
+#include <limits>
 
-#define BINCOUNT 275
+#define BINCOUNT 250
 
-#define BINCOUNTDIST 400
+#define BINCOUNTDIST 500
 
 #define SEARCHDEGREE 15.0
 
@@ -41,7 +42,9 @@
 
 #define SEARCHDIST 1.0
 
-#define ANGLENOISECOST 10
+#define ANGLENOISECONST 10
+
+#define NOISECONST 5
 
 using namespace std;
 
@@ -168,8 +171,8 @@ int main(int argc, char* argv[]) {
         VRScanner* temp = new VRScanner();
         temp->setSize(361);
 
-        temp->setNoiseConst(0.03);
-        //temp->setNoiseLinear(0.05);
+        //temp->setNoiseConst(0.03);
+        temp->setNoiseLinear(0.01);
         temp->setNoiseEnabled(true);
         scanner = temp;
     } else {
@@ -420,12 +423,11 @@ int main(int argc, char* argv[]) {
             oldHistY[i] = 0;
         }
 
-
         //calculate angle histogram
         double angle;
-        for (unsigned int i=ANGLENOISECOST; i < scan.size()-ANGLENOISECOST; ++i) {
-            if (scan[i-ANGLENOISECOST].isValid() && scan[i+ANGLENOISECOST].isValid()) {
-                angle = atan2(scan[i-ANGLENOISECOST][1] - scan[i+ANGLENOISECOST][1], scan[i-ANGLENOISECOST][0] - scan[i+ANGLENOISECOST][0]) * 180 /PI;
+        for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
+            if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
+                angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
                 int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
                 oldHist[j] = oldHist[j] + 1;
             }
@@ -456,8 +458,60 @@ int main(int argc, char* argv[]) {
 
         //rotate initial scan so it is axis aligned
         scan.rotate(rotationOffset);
+//take the mean of the scan data
+                double elementsX[scan.size()];
+                double elementsY[scan.size()];
+                for (int j = 0; j < NOISECONST; ++j) {
+                    elementsX[j] = scan[j][0];
+                    elementsX[scan.size()-1-j] = scan[scan.size()-1-j][0];
+                    elementsY[j] = scan[j][1];
+                    elementsY[scan.size()-1-j] = scan[scan.size()-1-j][1];
+                }
+                for (unsigned int i = NOISECONST; i < scan.size()-NOISECONST; ++i) {
+                    int numNotValid = 0;
+                    double x = 0, y = 0;
+                    if (scan[i].isValid()) {
+                        x = scan[i][0];
+                        y = scan[i][1];
+                    } else {
+                        numNotValid++;
+                    }
+                    for (int j = 1; j < NOISECONST; ++j) {
+                        if (scan[i-j].isValid()) {
+                            x = x + scan[i-j][0];
+                            y = y + scan[i-j][1];
+                        } else {
+                            numNotValid++;
+                        }
+                        if (scan[i+j].isValid()) {
+                            x = x + scan[i+j][0];
+                            y = y + scan[i+j][1];
+                        } else {
+                            numNotValid++;
+                        }
+                    }
+                    if (numNotValid == 2*NOISECONST) {
+                        x = numeric_limits<double>::quiet_NaN();
+                        y = numeric_limits<double>::quiet_NaN();
+                    } else {
+                        x = x/((2*NOISECONST)-numNotValid);
+                        y = y/((2*NOISECONST)-numNotValid);
+                    }
+                    elementsX[i] = x;
+                    elementsY[i] = y;
+                }
 
-        //calculate x and y histogram
+                //calculate x and y histograms
+                for (unsigned int i = 0; i < scan.size(); ++i) {
+                    if (!isnan(elementsX[i])) {
+                        int j = (int) ((elementsX[i] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
+                        oldHistX[j] = oldHistX[j]+1;
+                        j = (int) ((elementsY[i] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
+                        oldHistY[j] = oldHistY[j]+1;
+                    }
+                }
+
+        /*calculate x and y histogram
         for (unsigned int i = 0; i < scan.size(); ++i) {
             if (scan[i].isValid()) {
                 int j = (int) ((scan[i][0] * BINCOUNTDIST/2) / MAXLASERDIST) + (BINCOUNTDIST/2);
@@ -465,7 +519,7 @@ int main(int argc, char* argv[]) {
                 j = (int) ((scan[i][1] * BINCOUNTDIST/2) / MAXLASERDIST) + (BINCOUNTDIST/2);
                 oldHistY[j] = oldHistY[j]+1;
             }
-        }
+        }*/
 
         /*
            for (int i = 0; i < BINCOUNTDIST; ++i) {
@@ -569,9 +623,9 @@ int main(int argc, char* argv[]) {
                 }
 
                 //calculate current angle histogram
-                for (unsigned int i=ANGLENOISECOST; i < scan.size()-ANGLENOISECOST; ++i) {
-                    if (scan[i-ANGLENOISECOST].isValid() && scan[i+ANGLENOISECOST].isValid()) {
-                        angle = atan2(scan[i-ANGLENOISECOST][1] - scan[i+ANGLENOISECOST][1], scan[i-ANGLENOISECOST][0] - scan[i+ANGLENOISECOST][0]) * 180 /PI;
+                for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
+                    if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
+                        angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
                         int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
                         hist[j] = hist[j] + 1;
                     }
@@ -648,12 +702,55 @@ int main(int argc, char* argv[]) {
                 scan.rotate(rotationOffset);
 
                 // TRANSLATION CORRECTION-----------------------------------------------------------------------------------
+                //take the mean of the scan data
+                //double elementsX[scan.size()];
+                //double elementsY[scan.size()];
+                for (int j = 0; j < NOISECONST; ++j) {
+                    elementsX[j] = scan[j][0];
+                    elementsX[scan.size()-1-j] = scan[scan.size()-1-j][0];
+                    elementsY[j] = scan[j][1];
+                    elementsY[scan.size()-1-j] = scan[scan.size()-1-j][1];
+                }
+                for (unsigned int i = NOISECONST; i < scan.size()-NOISECONST; ++i) {
+                    int numNotValid = 0;
+                    double x = 0, y = 0;
+                    if (scan[i].isValid()) {
+                        x = scan[i][0];
+                        y = scan[i][1];
+                    } else {
+                        numNotValid++;
+                    }
+                    for (int j = 1; j < NOISECONST; ++j) {
+                        if (scan[i-j].isValid()) {
+                            x = x + scan[i-j][0];
+                            y = y + scan[i-j][1];
+                        } else {
+                            numNotValid++;
+                        }
+                        if (scan[i+j].isValid()) {
+                            x = x + scan[i+j][0];
+                            y = y + scan[i+j][1];
+                        } else {
+                            numNotValid++;
+                        }
+                    }
+                    if (numNotValid == 2*NOISECONST) {
+                        x = numeric_limits<double>::quiet_NaN();
+                        y = numeric_limits<double>::quiet_NaN();
+                    } else {
+                        x = x/((2*NOISECONST)-numNotValid);
+                        y = y/((2*NOISECONST)-numNotValid);
+                    }
+                    elementsX[i] = x;
+                    elementsY[i] = y;
+                }
+
                 //calculate x and y histograms
                 for (unsigned int i = 0; i < scan.size(); ++i) {
-                    if (scan[i].isValid()) {
-                        int j = (int) ((scan[i][0] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
+                    if (!isnan(elementsX[i])) {
+                        int j = (int) ((elementsX[i] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
                         histX[j] = histX[j]+1;
-                        j = (int) ((scan[i][1] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
+                        j = (int) ((elementsY[i] * BINCOUNTDIST/2.0) / MAXLASERDIST) + (BINCOUNTDIST/2.0);
                         histY[j] = histY[j]+1;
                     }
                 }

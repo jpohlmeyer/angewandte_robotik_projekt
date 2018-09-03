@@ -32,15 +32,15 @@
 
 #include <limits>
 
-#define BINCOUNT 300
+#define BINCOUNT 400
 
 #define BINCOUNTDIST 500
 
 #define SEARCHDEGREE 15.0
 
-#define MAXLASERDIST 9.0
+#define MAXLASERDIST 6.0
 
-#define SEARCHDIST 1.0
+#define SEARCHDIST 0.75
 
 #define ANGLENOISECONST 10
 
@@ -258,6 +258,8 @@ int main(int argc, char* argv[]) {
     ScanData oldScan;
     Map map;
     Indicator indicator;
+
+    map.setTolerance(0.05);
     //display::Color drawCol( 1.0, 0.5, 0.0 );
     //Histogram histogram(drawCol);
     //display::Color drawColOld( 0.5, 1.0, 0.0 );
@@ -594,24 +596,25 @@ int main(int argc, char* argv[]) {
             if (front > 5) {
                 if (abs(right - left) < 5) {
                     if (right < 5) {
-                        steering->setWheelSpeed(0.2, 0.0);
+                        steering->setWheelSpeed(0.1, 0.0);
                     } else {
-                        steering->turn(PI);
+                        //steering->turn(PI);
+                        steering->setWheelSpeed(0.1, -0.1);
                     }
                 } else if (right > left) {
-                    steering->setWheelSpeed(0.0, 0.2);
+                    steering->setWheelSpeed(0.0, 0.1);
                 } else if (left > right) {
-                    steering->setWheelSpeed(0.2, 0.0);
+                    steering->setWheelSpeed(0.1, 0.0);
                 } 
             } else if (obstacles[minIdx].getDistance() <= minDist) { 
                 if (minIdx < scan.size()/2) {
-                    steering->setWheelSpeed(0.1, 0.2);
+                    steering->setWheelSpeed(0.05, 0.1);
                 } else {
-                    steering->setWheelSpeed(0.2, 0.1);
+                    steering->setWheelSpeed(0.1, 0.05);
                 }
             } 
             else {
-                steering->setWheelSpeed(0.15, 0.15);
+                steering->setWheelSpeed(0.07, 0.07);
             }
 
             //current test movement
@@ -619,13 +622,14 @@ int main(int argc, char* argv[]) {
             //steering->move(0.5);
 
             //sup execution loop responsible for map update
-            if (count % 5 == 0) {
+            if (count % 4 == 0) {
+                //save scan from previous update step and get current scan
+                //if(count % 16 == 0) {
+                    oldScan = scan;
+                //}
                 //save odom position from previous update step and get new odom pos
                 oldPos = odom;
                 odom = steering->getPosition();
-
-                //save scan from previous update step and get current scan
-                oldScan = scan;
                 //scan = obstacles;
                 scanner->scan(scan); 
 
@@ -678,18 +682,18 @@ int main(int argc, char* argv[]) {
 
                 //set up info to draw histograms
                 //current angle hist becomes old angle hist
-                int maxIdx = 0;
-                int maxVal = 0;
+                //int maxIdx = 0;
+                //int maxVal = 0;
                 for (int i = 0; i < BINCOUNT; ++i) {
                     histogram.bins[i] = hist[i];
                     histogramOld.bins[i] = oldHist[i];
                     histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
                     oldHist[i] = hist[i];
-                    if (hist[i] > maxVal) {
+                    /*if (hist[i] > maxVal) {
                         maxVal = hist[i];
                         maxIdx = i;
-                    }
-                    std::cout<<"maxIdx: "<<maxIdx<<endl;
+                    }*/
+                    //std::cout<<"maxIdx: "<<maxIdx<<endl;
                 }
 
                 // ROTATION CORRECTION----------------------------------------------------------------------------------------
@@ -821,7 +825,7 @@ int main(int argc, char* argv[]) {
 
                 }
 
-                //
+                
 
                 int maximumIdxX = (searchIdxX + corrMaxX + BINCOUNTDIST) % BINCOUNTDIST;
                 int maximumIdxY = (searchIdxY + corrMaxY + BINCOUNTDIST) % BINCOUNTDIST;

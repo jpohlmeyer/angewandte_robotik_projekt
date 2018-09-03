@@ -98,7 +98,7 @@ void averageScanData(ScanData &scan, double *elementsX, double *elementsY) {
         }
         elementsX[i] = x;
         elementsY[i] = y;
-        cout<<i<<": scan x: "<<scan[i][0]<<" scan y: "<<scan[i][1]<<" elementsX: "<<elementsX[i]<<" elementsY: "<<elementsY[i]<<endl;
+        //cout<<i<<": scan x: "<<scan[i][0]<<" scan y: "<<scan[i][1]<<" elementsX: "<<elementsX[i]<<" elementsY: "<<elementsY[i]<<endl;
     }
 }
 //
@@ -472,23 +472,23 @@ int main(int argc, char* argv[]) {
         averageScanData(scan, &elementsX[0], &elementsY[0]); 
         //calculate angle histogram
         double angle;
-        for (unsigned int i=0; i < scan.size()-1; ++i) {
-            if (!isnan(elementsX[i]) && !isnan(elementsX[i+1])) {
-                angle = atan2(elementsY[i] - elementsY[i+1], elementsX[i] - elementsX[i+1]) * 180 /PI;
+        for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
+            if (!isnan(elementsX[i-ANGLENOISECONST]) && !isnan(elementsX[i+ANGLENOISECONST])) {
+                angle = atan2(elementsY[i-ANGLENOISECONST] - elementsY[i+ANGLENOISECONST], elementsX[i-ANGLENOISECONST] - elementsX[i+ANGLENOISECONST]) * 180 /PI;
                 int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
                 oldHist[j] = oldHist[j] + 1;
             }
         }
-        
+
         /*
         //calculate angle histogram
         double angle;
         for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
-            if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
-                angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
-                int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
-                oldHist[j] = oldHist[j] + 1;
-            }
+        if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
+        angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
+        int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
+        oldHist[j] = oldHist[j] + 1;
+        }
         }*/
 
         //calculate most common direction in angle histogram
@@ -516,7 +516,7 @@ int main(int argc, char* argv[]) {
 
         //rotate initial scan so it is axis aligned
         scan.rotate(rotationOffset);
-        
+
         //take the mean of the scan data
         averageScanData(scan, &elementsX[0], &elementsY[0]); 
 
@@ -644,9 +644,9 @@ int main(int argc, char* argv[]) {
                 averageScanData(scan, &elementsX[0], &elementsY[0]);
 
                 //calculate current angle histogram
-                for (unsigned int i=0; i < scan.size()-1; ++i) {
-                    if (!isnan(elementsX[i]) && !isnan(elementsX[i+1])) {
-                        angle = atan2(elementsY[i] - elementsY[i+1], elementsX[i] - elementsX[i+1]) * 180 /PI;
+                for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
+                    if (!isnan(elementsX[i-ANGLENOISECONST]) && !isnan(elementsX[i+ANGLENOISECONST])) {
+                        angle = atan2(elementsY[i-ANGLENOISECONST] - elementsY[i+ANGLENOISECONST], elementsX[i-ANGLENOISECONST] - elementsX[i+ANGLENOISECONST]) * 180 /PI;
                         int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
                         hist[j] = hist[j] + 1;
                     }
@@ -655,11 +655,11 @@ int main(int argc, char* argv[]) {
                 /*
                 //calculate current angle histogram
                 for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
-                    if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
-                        angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
-                        int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
-                        hist[j] = hist[j] + 1;
-                    }
+                if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
+                angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
+                int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
+                hist[j] = hist[j] + 1;
+                }
                 }*/
 
                 //calculate correlation between old and current angle histogram
@@ -678,12 +678,18 @@ int main(int argc, char* argv[]) {
 
                 //set up info to draw histograms
                 //current angle hist becomes old angle hist
+                int maxIdx = 0;
+                int maxVal = 0;
                 for (int i = 0; i < BINCOUNT; ++i) {
                     histogram.bins[i] = hist[i];
                     histogramOld.bins[i] = oldHist[i];
                     histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
                     oldHist[i] = hist[i];
-                    //std::cout<<"corr "<<i*360.0/BINCOUNT<<" : "<<corr[i]<<endl;
+                    if (hist[i] > maxVal) {
+                        maxVal = hist[i];
+                        maxIdx = i;
+                    }
+                    std::cout<<"maxIdx: "<<maxIdx<<endl;
                 }
 
                 // ROTATION CORRECTION----------------------------------------------------------------------------------------

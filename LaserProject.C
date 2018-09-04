@@ -36,7 +36,7 @@
 
 #define BINCOUNTDIST 500
 
-#define SEARCHDEGREE 15.0
+#define SEARCHDEGREE 30.0
 
 #define MAXLASERDIST 6.0
 
@@ -46,9 +46,11 @@
 
 #define NOISECONST 4
 
-#define COUNT 2
+#define COUNT 1
 
 #define UPDATEREFSCAN 2
+
+#define DEBUG 0
 
 using namespace std;
 
@@ -521,7 +523,9 @@ int main(int argc, char* argv[]) {
         double transOffsetXOld = 0;
         double transOffsetYOld = 0;
 
-        std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
+        if (DEBUG) {
+            std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
+        }
 
         //rotate initial scan so it is axis aligned
         scan.rotate(rotationOffset);
@@ -752,7 +756,9 @@ int main(int argc, char* argv[]) {
                     rotationOffsetOld = rotationOffset;
                 }
 
-                std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
+                if (DEBUG) {
+                    std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
+                }
 
                 //rotate scan to same orientation as previous scans
                 scan.rotate(rotationOffset);
@@ -784,9 +790,11 @@ int main(int argc, char* argv[]) {
                 double transY = sin(rotationOffset) * transXrobot + cos(rotationOffset) * transYrobot;
 
 
-
-                cout<<"transXODOM: "<<transX<<" transYODOM: "<<transY<<endl;
-
+                
+                if (DEBUG) {
+                    cout<<"transXODOM: "<<transX<<" transYODOM: "<<transY<<endl;
+                }
+                
                 //calculate index of bin for search in correlation
                 int searchIdxX = ((int) ((-transX / ((2*MAXLASERDIST) / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
                 int searchIdxY = ((int) ((-transY / ((2*MAXLASERDIST) / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
@@ -857,7 +865,9 @@ int main(int argc, char* argv[]) {
                     transY = ((BINCOUNTDIST - maximumIdxY) * 2 * MAXLASERDIST) / BINCOUNTDIST;
                 }
 
-                cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
+                if (DEBUG) {
+                    cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
+                }
 
                 //multiply resulting translation vektor with rotation matrix to translate into global translation vektor
                 //double rotatedTransX = cos(rotationOffset) * transX - sin(rotationOffset) * transY;
@@ -903,9 +913,11 @@ int main(int argc, char* argv[]) {
             mapWindow->update();
             if (vrWindow)
                 vrWindow->update();
-            histWindow->update();
-            histWindowX->update();
-            histWindowY->update();
+            if (DEBUG) {
+                histWindow->update();
+                histWindowX->update();
+                histWindowY->update();
+            }
 
             //if (count == 0) {
             //waitKey(false);

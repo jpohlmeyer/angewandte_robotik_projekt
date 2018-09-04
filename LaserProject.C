@@ -46,9 +46,9 @@
 
 #define NOISECONST 4
 
-#define COUNT 1
+#define COUNT 4
 
-#define UPDATEREFSCAN 2
+#define UPDATEREFSCAN 1
 
 #define DEBUG 0
 
@@ -923,7 +923,7 @@ int main(int argc, char* argv[]) {
             //waitKey(false);
             // }
             count++;
-            //usleep(100000);
+            usleep(100000);
         }
     } catch (const Exception& exception) {
         log_ << Log::ERROR << "something went wrong: "

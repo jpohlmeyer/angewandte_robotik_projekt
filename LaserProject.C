@@ -38,13 +38,17 @@
 
 #define SEARCHDEGREE 15.0
 
-#define MAXLASERDIST 6.0
+#define MAXLASERDIST 12.0
 
 #define SEARCHDIST 0.75
 
 #define ANGLENOISECONST 10
 
 #define NOISECONST 4
+
+#define COUNT 4
+
+#define UPDATEREFSCAN 1
 
 using namespace std;
 
@@ -236,7 +240,7 @@ int main(int argc, char* argv[]) {
         VRSteering* temp = new VRSteering();
 
         temp->setVRWorldFile("labor.vr");
-        temp->setPose(Pose(1.0, -3.0, 0.0));
+        temp->setPose(Pose(1.0, -3.0, -PI/2.0));
 
 
         steering = temp;
@@ -513,6 +517,9 @@ int main(int argc, char* argv[]) {
         } else {
             rotationOffset = (((BINCOUNT/2-maxI) * 360.0) / BINCOUNT)*PI/180.0;
         }
+        double rotationOffsetOld = rotationOffset;
+        double transOffsetXOld = 0;
+        double transOffsetYOld = 0;
 
         std::cout<<"initial offset: "<<rotationOffset<<" maxJ "<<maxI<<endl;
 
@@ -593,28 +600,30 @@ int main(int argc, char* argv[]) {
                 }
             }
 
+            double velocityFactor = 2.0;
+
             if (front > 5) {
                 if (abs(right - left) < 5) {
                     if (right < 5) {
-                        steering->setWheelSpeed(0.1, 0.0);
+                        steering->setWheelSpeed(0.1*velocityFactor, 0.0);
                     } else {
                         //steering->turn(PI);
-                        steering->setWheelSpeed(0.1, -0.1);
+                        steering->setWheelSpeed(0.1*velocityFactor, -0.1*velocityFactor);
                     }
                 } else if (right > left) {
-                    steering->setWheelSpeed(0.0, 0.1);
+                    steering->setWheelSpeed(0.0, 0.1*velocityFactor);
                 } else if (left > right) {
-                    steering->setWheelSpeed(0.1, 0.0);
+                    steering->setWheelSpeed(0.1*velocityFactor, 0.0);
                 } 
             } else if (obstacles[minIdx].getDistance() <= minDist) { 
                 if (minIdx < scan.size()/2) {
-                    steering->setWheelSpeed(0.05, 0.1);
+                    steering->setWheelSpeed(0.05*velocityFactor, 0.1*velocityFactor);
                 } else {
-                    steering->setWheelSpeed(0.1, 0.05);
+                    steering->setWheelSpeed(0.1*velocityFactor, 0.05*velocityFactor);
                 }
             } 
             else {
-                steering->setWheelSpeed(0.07, 0.07);
+                steering->setWheelSpeed(0.07*velocityFactor, 0.07*velocityFactor);
             }
 
             //current test movement
@@ -622,13 +631,13 @@ int main(int argc, char* argv[]) {
             //steering->move(0.5);
 
             //sup execution loop responsible for map update
-            if (count % 4 == 0) {
+            if (count % COUNT == 0) {
                 //save scan from previous update step and get current scan
-                //if(count % 16 == 0) {
+                if(count % (COUNT * UPDATEREFSCAN) == 0) {
                     oldScan = scan;
-                //}
+                    oldPos = odom;
+                }
                 //save odom position from previous update step and get new odom pos
-                oldPos = odom;
                 odom = steering->getPosition();
                 //scan = obstacles;
                 scanner->scan(scan); 
@@ -688,7 +697,9 @@ int main(int argc, char* argv[]) {
                     histogram.bins[i] = hist[i];
                     histogramOld.bins[i] = oldHist[i];
                     histogramCor.bins[i] = (((double) corr[i])/maxCor)*290;
-                    oldHist[i] = hist[i];
+                    if(count % (COUNT * UPDATEREFSCAN) == 0) {
+                        oldHist[i] = hist[i];
+                    }
                     /*if (hist[i] > maxVal) {
                         maxVal = hist[i];
                         maxIdx = i;
@@ -729,8 +740,11 @@ int main(int argc, char* argv[]) {
                 //calculate turn from bin with max corr in radiant
                 turnRad = 2.0*PI-((searchPointIdx*(360.0/BINCOUNT))*PI/180.0);
 
+                if (count % (COUNT * UPDATEREFSCAN) == 0) {
+                    rotationOffsetOld = rotationOffset;
+                }
                 //add previous turns to get global rotation
-                rotationOffset = rotationOffset + turnRad;
+                rotationOffset = rotationOffsetOld + turnRad;
                 if (rotationOffset < 0) {
                     rotationOffset = 2.0*PI + rotationOffset;
                 } else if (rotationOffset > 2.0*PI) {
@@ -849,8 +863,13 @@ int main(int argc, char* argv[]) {
                 //double rotatedTransY = sin(rotationOffset) * transX + cos(rotationOffset) * transY;
 
 
-                transOffsetX = transOffsetX + transX;
-                transOffsetY = transOffsetY + transY;
+                if (count % (COUNT * UPDATEREFSCAN) == 0) {
+                    transOffsetXOld = transOffsetX;
+                    transOffsetYOld = transOffsetY;
+                }
+ 
+                transOffsetX = transOffsetXOld + transX;
+                transOffsetY = transOffsetYOld + transY;
 
                 //translate scan
                 scan.translate(transOffsetX, transOffsetY);
@@ -866,8 +885,10 @@ int main(int argc, char* argv[]) {
                     histogramOldY.bins[i] = oldHistY[i];
                     histogramY.bins[i] = histY[i];
                     histogramCorY.bins[i] = (((double) corrY[i])/globalMaxCorY)*290;
-                    oldHistX[i] = histX[i];
-                    oldHistY[i] = histY[i];
+                    if(count % (COUNT * UPDATEREFSCAN) == 0) {
+                        oldHistX[i] = histX[i];
+                        oldHistY[i] = histY[i];
+                    }
                 }
 
 

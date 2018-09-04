@@ -38,7 +38,7 @@
 
 #define SEARCHDEGREE 15.0
 
-#define MAXLASERDIST 12.0
+#define MAXLASERDIST 6.0
 
 #define SEARCHDIST 0.75
 
@@ -46,9 +46,9 @@
 
 #define NOISECONST 4
 
-#define COUNT 4
+#define COUNT 2
 
-#define UPDATEREFSCAN 1
+#define UPDATEREFSCAN 2
 
 using namespace std;
 
@@ -600,7 +600,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            double velocityFactor = 2.0;
+            double velocityFactor = 1.0;
 
             if (front > 5) {
                 if (abs(right - left) < 5) {
@@ -719,7 +719,7 @@ int main(int argc, char* argv[]) {
                 int searchPointIdx = (int) ((360.0-turn)/(360.0/BINCOUNT));
 
                 //calculate how many bins to search around the estimated search bin
-                int binsFromDegree = (int) (SEARCHDEGREE/(360.0/BINCOUNT));
+                int binsFromDegree = (int) ((SEARCHDEGREE)/(360.0/BINCOUNT));
                 //search for max correlation around searchPointIdx
                 //save relative distance from bin with max from origin of search
                 int corrMax = 0;
@@ -740,15 +740,16 @@ int main(int argc, char* argv[]) {
                 //calculate turn from bin with max corr in radiant
                 turnRad = 2.0*PI-((searchPointIdx*(360.0/BINCOUNT))*PI/180.0);
 
-                if (count % (COUNT * UPDATEREFSCAN) == 0) {
-                    rotationOffsetOld = rotationOffset;
-                }
                 //add previous turns to get global rotation
                 rotationOffset = rotationOffsetOld + turnRad;
                 if (rotationOffset < 0) {
                     rotationOffset = 2.0*PI + rotationOffset;
                 } else if (rotationOffset > 2.0*PI) {
                     rotationOffset = rotationOffset - 2.0*PI;
+                }
+
+                if (count % (COUNT * UPDATEREFSCAN) == 0) {
+                    rotationOffsetOld = rotationOffset;
                 }
 
                 std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
@@ -813,7 +814,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 //calculate how many bins to search around estimated position
-                int binsFromTrans = (int) (SEARCHDIST/((2*MAXLASERDIST)/BINCOUNTDIST));
+                int binsFromTrans = (int) ((SEARCHDIST)/((2*MAXLASERDIST)/BINCOUNTDIST));
                 int corrMaxX = 0;
                 double corrMaxValX = 0;
                 int corrMaxY = 0;
@@ -863,14 +864,15 @@ int main(int argc, char* argv[]) {
                 //double rotatedTransY = sin(rotationOffset) * transX + cos(rotationOffset) * transY;
 
 
+
+                transOffsetX = transOffsetXOld + transX;
+                transOffsetY = transOffsetYOld + transY;
+
                 if (count % (COUNT * UPDATEREFSCAN) == 0) {
                     transOffsetXOld = transOffsetX;
                     transOffsetYOld = transOffsetY;
                 }
  
-                transOffsetX = transOffsetXOld + transX;
-                transOffsetY = transOffsetYOld + transY;
-
                 //translate scan
                 scan.translate(transOffsetX, transOffsetY);
                 //scan.translate(1, searchIdxY);

@@ -50,7 +50,11 @@
 
 #define UPDATEREFSCAN 1
 
-#define DEBUG 0
+#define ALIGNAXES 10
+
+#define ALIGNAXESSEARCHRANGE 5
+
+#define DEBUG 1
 
 using namespace std;
 
@@ -695,8 +699,8 @@ int main(int argc, char* argv[]) {
 
                 //set up info to draw histograms
                 //current angle hist becomes old angle hist
-                //int maxIdx = 0;
-                //int maxVal = 0;
+                int maxIdx = 0;
+                int maxVal = 0;
                 for (int i = 0; i < BINCOUNT; ++i) {
                     histogram.bins[i] = hist[i];
                     histogramOld.bins[i] = oldHist[i];
@@ -704,11 +708,14 @@ int main(int argc, char* argv[]) {
                     if(count % (COUNT * UPDATEREFSCAN) == 0) {
                         oldHist[i] = hist[i];
                     }
-                    /*if (hist[i] > maxVal) {
+                    if (hist[i] > maxVal) {
                         maxVal = hist[i];
                         maxIdx = i;
-                    }*/
-                    //std::cout<<"maxIdx: "<<maxIdx<<endl;
+                    }
+                }
+
+                if (DEBUG) {
+                    std::cout<<"maxIdx: "<<maxIdx<<endl;
                 }
 
                 // ROTATION CORRECTION----------------------------------------------------------------------------------------
@@ -752,9 +759,49 @@ int main(int argc, char* argv[]) {
                     rotationOffset = rotationOffset - 2.0*PI;
                 }
 
+                if (count % ALIGNAXES == 0) {
+                    int searchRange = (int) ((ALIGNAXESSEARCHRANGE)/(360.0/BINCOUNT));
+                    int rotationBin = (int) ((rotationOffset)/(360.0/BINCOUNT));
+                    int localSearchIdx = 0;
+                    if (rotationBin <= BINCOUNT/2) {
+                        localSearchIdx = (BINCOUNT/2 - rotationBin);
+                    } else {
+                        localSearchIdx = BINCOUNT-(rotationBin-BINCOUNT/2);
+                    }
+                    int maxAlignI = 0;
+                    int maxAlign = 0;
+                    for (int i = 0; i<searchRange; ++i) {
+                        if (hist[(localSearchIdx + i) % BINCOUNT] > maxAlign) {
+                            maxAlign = hist[(localSearchIdx + i) % BINCOUNT];
+                            maxAlignI = i;
+                        }
+                        if (hist[(localSearchIdx - i + BINCOUNT) % BINCOUNT] > maxAlign) {
+                            maxAlign = hist[(localSearchIdx - i + BINCOUNT) % BINCOUNT];
+                            maxAlignI = -i;
+                        }
+                    }
+               
+                    double iRad = maxAlignI * (360.0/BINCOUNT) * PI/180.0;
+
+                    if (DEBUG) {
+                        cout<<" rotationOffset before axis align: "<<rotationOffset<<endl;
+                    }
+
+                    rotationOffset = rotationOffset - iRad;
+                    if (rotationOffset < 0) {
+                        rotationOffset = 2.0*PI + rotationOffset;
+                    } else if (rotationOffset > 2.0*PI) {
+                        rotationOffset = rotationOffset - 2.0*PI;
+                    }
+                    if (DEBUG) {
+                        cout<<" rotationBin: "<<rotationBin<<" maxAlignI: "<<maxAlignI<<" rotationOffset: "<<rotationOffset<<endl;
+                    }
+                }
+
                 if (count % (COUNT * UPDATEREFSCAN) == 0) {
                     rotationOffsetOld = rotationOffset;
                 }
+
 
                 if (DEBUG) {
                     std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
@@ -866,7 +913,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 if (DEBUG) {
-                    cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
+                    //cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
                 }
 
                 //multiply resulting translation vektor with rotation matrix to translate into global translation vektor

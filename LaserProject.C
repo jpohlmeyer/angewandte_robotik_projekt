@@ -32,28 +32,40 @@
 
 #include <limits>
 
+// number of bins for the angle histogram
 #define BINCOUNT 550
 
+// number of bins for the x and y histograms
 #define BINCOUNTDIST 500
 
+// maximum angle around odometry estimate where we search for the local maximum in correlation
 #define SEARCHDEGREE 30.0
 
+// maximum laser distance for the scaling of the histogram
 #define MAXLASERDIST 6.0
 
+// maximum distance around odometry estimate where we search for the local maximum in correlation
 #define SEARCHDIST 0.75
 
+// for angle at point i the angle between i-ANGLENOISECONST and i+ANGLENOISECONST will be measured
 #define ANGLENOISECONST 10
 
+// from the scan data every point will be averaged by itself and this amount of points before and after
 #define NOISECONST 4
 
+// defines in which intervals the map update will be performed
 #define COUNT 4
 
+// defines in which intervals of the COUNT the reference scan will be updated
 #define UPDATEREFSCAN 1
 
+// defines in which intervals of the COUNT the axis alignment will be corrected
 #define ALIGNAXES 5
 
+// defines the maximum angle amount that the axis alignment will be performed
 #define ALIGNMAXDIFF 5
 
+// sets debug output and prints on/off
 #define DEBUG 0
 
 using namespace std;
@@ -69,6 +81,11 @@ bool terminate_ = false;
 bool autoStop = false;
 
 
+
+/*
+ * This method gets the scandata and two arrays.
+ * From the scandata the average X and Y values of the points will be calculated and written into the 2 arrays. 
+ */
 void averageScanData(ScanData &scan, double *elementsX, double *elementsY) {
     for (int j = 0; j < NOISECONST; ++j) {
         elementsX[j] = scan[j][0];

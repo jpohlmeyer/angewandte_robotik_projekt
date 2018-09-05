@@ -476,9 +476,10 @@ int main(int argc, char* argv[]) {
         // - sets a movement direction
         // - retrieves scan data from the Scanner object
         // - updates the displays
-        //
+
+
+        // initial scan
         scanner->scan(scan);
-        //map.integrate(scan);
         ScanData obstacles = scan;
 
         //old angle, x and y histograms
@@ -495,10 +496,11 @@ int main(int argc, char* argv[]) {
             oldHistY[i] = 0;
         }
 
+        // arrays to save averaged scan data
         double elementsX[scan.size()];
         double elementsY[scan.size()];
+        averageScanData(scan, &elementsX[0], &elementsY[0]);
 
-        averageScanData(scan, &elementsX[0], &elementsY[0]); 
         //calculate angle histogram
         double angle;
         for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
@@ -540,7 +542,7 @@ int main(int argc, char* argv[]) {
         //rotate initial scan so it is axis aligned
         scan.rotate(rotationOffset);
 
-        //take the mean of the scan data
+        //take the mean of axis aligned scan data
         averageScanData(scan, &elementsX[0], &elementsY[0]); 
 
         //calculate x and y histograms
@@ -553,26 +555,9 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        /*calculate x and y histogram
-          for (unsigned int i = 0; i < scan.size(); ++i) {
-          if (scan[i].isValid()) {
-          int j = (int) ((scan[i][0] * BINCOUNTDIST/2) / MAXLASERDIST) + (BINCOUNTDIST/2);
-          oldHistX[j] = oldHistX[j]+1;
-          j = (int) ((scan[i][1] * BINCOUNTDIST/2) / MAXLASERDIST) + (BINCOUNTDIST/2);
-          oldHistY[j] = oldHistY[j]+1;
-          }
-          }*/
-
-        /*
-           for (int i = 0; i < BINCOUNTDIST; ++i) {
-           cout<<"initial x "<<i<<" : "<<oldHistX[i]<<endl;
-           } 
-           for (int i = 0; i < BINCOUNTDIST; ++i) {
-           cout<<"y "<<i<<" : "<<oldHistY[i]<<endl;
-           }*/
-
         //integrate initial axis aligned scan, show  map and initial histogram and scan
         map.integrate(scan);
+
         mapWindow->update();
         histWindow->update();
         histWindowX->update();
@@ -585,6 +570,7 @@ int main(int argc, char* argv[]) {
 
         //Counter to make map update only every couple of rounds
         int count = 0;
+
         //main execution loop-----------------------------------------------------------------------------------
         while (!terminate_) {
             //
@@ -595,7 +581,8 @@ int main(int argc, char* argv[]) {
             //get current scan for obstacle avoidance
             scanner->scan(obstacles);
 
-            //movement with obstacle avoidance
+            // movement with obstacle avoidance
+            // get the amount of near scanpoints on front, left and right side
             unsigned int minIdx = obstacles.getMin().first;
             float minDist = 0.7;
             int left = 0, right = 0, front = 0;
@@ -614,14 +601,18 @@ int main(int argc, char* argv[]) {
                 }
             }
 
+            // factor to scale velocity of robot
             double velocityFactor = 1.0;
 
+
             if (front > 5) {
+                // no space in front
+                // if right more space go right, else go left
                 if (abs(right - left) < 5) {
-                    if (right < 5) {
+                    // if left and right equally near go right if possible else try to turn on spot
+                    if (right < 5) {    
                         steering->setWheelSpeed(0.1*velocityFactor, 0.0);
                     } else {
-                        //steering->turn(PI);
                         steering->setWheelSpeed(0.1*velocityFactor, -0.1*velocityFactor);
                     }
                 } else if (right > left) {
@@ -630,6 +621,7 @@ int main(int argc, char* argv[]) {
                     steering->setWheelSpeed(0.1*velocityFactor, 0.0);
                 } 
             } else if (obstacles[minIdx].getDistance() <= minDist) { 
+                // if space in front, but minimal distance from something is less then threshold try to stay a bit away from it (lean left/right)
                 if (minIdx < scan.size()/2) {
                     steering->setWheelSpeed(0.05*velocityFactor, 0.1*velocityFactor);
                 } else {
@@ -637,23 +629,19 @@ int main(int argc, char* argv[]) {
                 }
             } 
             else {
+                // no obstacles nearby, go ahead
                 steering->setWheelSpeed(0.07*velocityFactor, 0.07*velocityFactor);
             }
 
-            //current test movement
-            //steering->setWheelSpeed(0.15, 0.05);
-            //steering->move(0.5);
-
             //sup execution loop responsible for map update
             if (count % COUNT == 0) {
+
                 //save scan from previous update step and get current scan
                 if(count % (COUNT * UPDATEREFSCAN) == 0) {
                     oldScan = scan;
                     oldPos = odom;
                 }
-                //save odom position from previous update step and get new odom pos
                 odom = steering->getPosition();
-                //scan = obstacles;
                 scanner->scan(scan); 
 
                 //set up and initialise current histograms with zero
@@ -678,16 +666,6 @@ int main(int argc, char* argv[]) {
                         hist[j] = hist[j] + 1;
                     }
                 }
-
-                /*
-                //calculate current angle histogram
-                for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
-                if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
-                angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
-                int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
-                hist[j] = hist[j] + 1;
-                }
-                }*/
 
                 //calculate correlation between old and current angle histogram
                 //save max correlation
@@ -772,6 +750,7 @@ int main(int argc, char* argv[]) {
                 //rotate scan to same orientation as previous scans
                 scan.rotate(rotationOffset);
 
+                // realign the scan onto the axes periodically
                 if (count % (ALIGNAXES*COUNT) == 0) {
                     averageScanData(scan, &elementsX[0], &elementsY[0]);
                     int alignHist[BINCOUNT];
@@ -798,7 +777,7 @@ int main(int argc, char* argv[]) {
                         }
                     }
 
-                    //calculat initial rotation offsett needet to aligne the map (most common direction) to the x ynd y axis
+                    //calculate align offset from next maxiumum
                     double alignOffset;
                     if (maxAlignI > BINCOUNT/2) {
                         alignOffset = 2.0*PI-((((maxAlignI-BINCOUNT/2) * 360.0) / BINCOUNT)*PI/180.0);
@@ -806,6 +785,7 @@ int main(int argc, char* argv[]) {
                         alignOffset = (((BINCOUNT/2-maxAlignI) * 360.0) / BINCOUNT)*PI/180.0;
                     }
 
+                    // check for each sane maximum (multiple of PI/2) if it is in range, then align onto it
                     if (alignOffset < (ALIGNMAXDIFF*PI/180.0)) {
                         alignOffset = alignOffset;
                     } else if (alignOffset > (PI/2.0-(ALIGNMAXDIFF*PI/180.0)) && alignOffset < (PI/2.0+(ALIGNMAXDIFF*PI/180.0))) {
@@ -818,13 +798,13 @@ int main(int argc, char* argv[]) {
                         alignOffset = alignOffset - 2*PI;
                     } else {
                         alignOffset = 0;
-                        if (DEBUG || true) {
+                        if (DEBUG) {
                             cout<<"WEIRD ALIGN OFFSET: "<<alignOffset<<endl;
                         }
                     }
                     rotationOffset = rotationOffset + alignOffset;
                     scan.rotate(alignOffset);
-                    if (DEBUG || true) {
+                    if (DEBUG) {
                         cout<<"alignOffset: "<<alignOffset<<endl;
                     }
                     if (rotationOffset < 0) {
@@ -834,7 +814,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
-
+                //update rotationOffsetOld if refscan is changed
                 if (count % (COUNT * UPDATEREFSCAN) == 0) {
                     rotationOffsetOld = rotationOffset;
                 }
@@ -854,10 +834,6 @@ int main(int argc, char* argv[]) {
                         histY[j] = histY[j]+1;
                     }
                 }
-
-                /*for (int i = 0; i < BINCOUNTDIST; ++i) {
-                  cout<<"count: "<<count<<" y "<<i<<" : "<<histY[i]<<endl;
-                  }*/
 
                 //get relative movement in x and y direction
                 double transXrobot = odom.getX() - oldPos.getX();
@@ -926,7 +902,7 @@ int main(int argc, char* argv[]) {
                 }
 
 
-
+                // calculate translation in x and y direction
                 int maximumIdxX = (searchIdxX + corrMaxX + BINCOUNTDIST) % BINCOUNTDIST;
                 int maximumIdxY = (searchIdxY + corrMaxY + BINCOUNTDIST) % BINCOUNTDIST;
 
@@ -946,15 +922,11 @@ int main(int argc, char* argv[]) {
                     //cout<<"transX: "<<transX<<" transY: "<<transY<<" searchidxX: "<<searchIdxX<<" searchidxY: "<<searchIdxY<<" corrMaxX: "<<corrMaxX<<" corrMaxY: "<<corrMaxY<<" binsFromTrans: "<<binsFromTrans<<endl;
                 }
 
-                //multiply resulting translation vektor with rotation matrix to translate into global translation vektor
-                //double rotatedTransX = cos(rotationOffset) * transX - sin(rotationOffset) * transY;
-                //double rotatedTransY = sin(rotationOffset) * transX + cos(rotationOffset) * transY;
-
-
-
+                // add translation to the offse
                 transOffsetX = transOffsetXOld + transX;
                 transOffsetY = transOffsetYOld + transY;
 
+                // update offsetOld if ref scan is changed
                 if (count % (COUNT * UPDATEREFSCAN) == 0) {
                     transOffsetXOld = transOffsetX;
                     transOffsetYOld = transOffsetY;
@@ -962,9 +934,6 @@ int main(int argc, char* argv[]) {
 
                 //translate scan
                 scan.translate(transOffsetX, transOffsetY);
-                //scan.translate(1, searchIdxY);
-
-                //cout<<"rottransX: "<<rotatedTransX<<" rottransY: "<<rotatedTransY<<endl;
 
                 //current histograms become old ones
                 for (int i = 0; i < BINCOUNTDIST; ++i) {

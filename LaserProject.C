@@ -52,9 +52,9 @@
 
 #define ALIGNAXES 10
 
-#define ALIGNAXESSEARCHRANGE 5
+#define ALIGNMAXDIFF 5
 
-#define DEBUG 1
+#define DEBUG 0
 
 using namespace std;
 
@@ -492,17 +492,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        /*
-        //calculate angle histogram
-        double angle;
-        for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
-        if (scan[i-ANGLENOISECONST].isValid() && scan[i+ANGLENOISECONST].isValid()) {
-        angle = atan2(scan[i-ANGLENOISECONST][1] - scan[i+ANGLENOISECONST][1], scan[i-ANGLENOISECONST][0] - scan[i+ANGLENOISECONST][0]) * 180 /PI;
-        int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
-        oldHist[j] = oldHist[j] + 1;
-        }
-        }*/
-
         //calculate most common direction in angle histogram
         int maxI = 0;
         int maxHist = 0;
@@ -759,56 +748,80 @@ int main(int argc, char* argv[]) {
                     rotationOffset = rotationOffset - 2.0*PI;
                 }
 
-                if (count % ALIGNAXES == 0) {
-                    int searchRange = (int) ((ALIGNAXESSEARCHRANGE)/(360.0/BINCOUNT));
-                    int rotationBin = (int) ((rotationOffset)/(360.0/BINCOUNT));
-                    int localSearchIdx = 0;
-                    if (rotationBin <= BINCOUNT/2) {
-                        localSearchIdx = (BINCOUNT/2 - rotationBin);
-                    } else {
-                        localSearchIdx = BINCOUNT-(rotationBin-BINCOUNT/2);
-                    }
-                    int maxAlignI = 0;
-                    int maxAlign = 0;
-                    for (int i = 0; i<searchRange; ++i) {
-                        if (hist[(localSearchIdx + i) % BINCOUNT] > maxAlign) {
-                            maxAlign = hist[(localSearchIdx + i) % BINCOUNT];
-                            maxAlignI = i;
-                        }
-                        if (hist[(localSearchIdx - i + BINCOUNT) % BINCOUNT] > maxAlign) {
-                            maxAlign = hist[(localSearchIdx - i + BINCOUNT) % BINCOUNT];
-                            maxAlignI = -i;
-                        }
-                    }
-               
-                    double iRad = maxAlignI * (360.0/BINCOUNT) * PI/180.0;
-
-                    if (DEBUG) {
-                        cout<<" rotationOffset before axis align: "<<rotationOffset<<endl;
-                    }
-
-                    rotationOffset = rotationOffset - iRad;
-                    if (rotationOffset < 0) {
-                        rotationOffset = 2.0*PI + rotationOffset;
-                    } else if (rotationOffset > 2.0*PI) {
-                        rotationOffset = rotationOffset - 2.0*PI;
-                    }
-                    if (DEBUG) {
-                        cout<<" rotationBin: "<<rotationBin<<" maxAlignI: "<<maxAlignI<<" rotationOffset: "<<rotationOffset<<endl;
-                    }
-                }
-
-                if (count % (COUNT * UPDATEREFSCAN) == 0) {
-                    rotationOffsetOld = rotationOffset;
-                }
-
-
                 if (DEBUG) {
                     std::cout<<"orientation now: "<<odom.getOrientation()<<" or before "<<oldPos.getOrientation()<<" turnRad "<<turnRad<<" searchIdx "<<searchPointIdx<<" binsFromDegree "<<binsFromDegree<<endl;
                 }
 
                 //rotate scan to same orientation as previous scans
                 scan.rotate(rotationOffset);
+
+                if (count % (ALIGNAXES*COUNT) == 0) {
+                    averageScanData(scan, &elementsX[0], &elementsY[0]);
+                    int alignHist[BINCOUNT];
+                    for (int i = 0; i < BINCOUNT; ++i) {
+                        alignHist[i] = 0;
+                    }
+
+                    //calculate angle histogram
+                    for (unsigned int i=ANGLENOISECONST; i < scan.size()-ANGLENOISECONST; ++i) {
+                        if (!isnan(elementsX[i-ANGLENOISECONST]) && !isnan(elementsX[i+ANGLENOISECONST])) {
+                            angle = atan2(elementsY[i-ANGLENOISECONST] - elementsY[i+ANGLENOISECONST], elementsX[i-ANGLENOISECONST] - elementsX[i+ANGLENOISECONST]) * 180 /PI;
+                            int j = ((int) ((angle+180)/(360.0/BINCOUNT)));
+                            alignHist[j] = alignHist[j] + 1;
+                        }
+                    }
+
+                    //calculate most common direction in angle histogram
+                    int maxAlignI = 0;
+                    int maxAlign = 0;
+                    for (int i = 0; i < BINCOUNT; ++i) {
+                        if (alignHist[i] > maxAlign) {
+                            maxAlign = alignHist[i];
+                            maxAlignI = i;
+                        }
+                    }
+
+                    //calculat initial rotation offsett needet to aligne the map (most common direction) to the x ynd y axis
+                    double alignOffset;
+                    if (maxAlignI > BINCOUNT/2) {
+                        alignOffset = 2.0*PI-((((maxAlignI-BINCOUNT/2) * 360.0) / BINCOUNT)*PI/180.0);
+                    } else {
+                        alignOffset = (((BINCOUNT/2-maxAlignI) * 360.0) / BINCOUNT)*PI/180.0;
+                    }
+
+                    if (alignOffset < (ALIGNMAXDIFF*PI/180.0)) {
+                        alignOffset = alignOffset;
+                    } else if (alignOffset > (PI/2.0-(ALIGNMAXDIFF*PI/180.0)) && alignOffset < (PI/2.0+(ALIGNMAXDIFF*PI/180.0))) {
+                        alignOffset = alignOffset - PI/2.0;
+                    } else if (alignOffset > (PI-(ALIGNMAXDIFF*PI/180.0)) && alignOffset < (PI+(ALIGNMAXDIFF*PI/180.0))) {
+                        alignOffset = alignOffset - PI;
+                    } else if (alignOffset > (3*(PI/2.0)-(ALIGNMAXDIFF*PI/180.0)) && alignOffset < (3*(PI/2.0)+(ALIGNMAXDIFF*PI/180.0))) {
+                        alignOffset = alignOffset - 3*(PI/2.0);
+                    } else if (alignOffset > (2*PI-(ALIGNMAXDIFF*PI/180.0))) {
+                        alignOffset = alignOffset - 2*PI;
+                    } else {
+                        alignOffset = 0;
+                        if (DEBUG || true) {
+                            cout<<"WEIRD ALIGN OFFSET: "<<alignOffset<<endl;
+                        }
+                    }
+                    rotationOffset = rotationOffset + alignOffset;
+                    scan.rotate(alignOffset);
+                    if (DEBUG || true) {
+                        cout<<"alignOffset: "<<alignOffset<<endl;
+                    }
+                    if (rotationOffset < 0) {
+                        rotationOffset = 2.0*PI + rotationOffset;
+                    } else if (rotationOffset > 2.0*PI) {
+                        rotationOffset = rotationOffset - 2.0*PI;
+                    }
+                }
+
+
+                if (count % (COUNT * UPDATEREFSCAN) == 0) {
+                    rotationOffsetOld = rotationOffset;
+                }
+
 
                 // TRANSLATION CORRECTION-----------------------------------------------------------------------------------
 
@@ -837,11 +850,11 @@ int main(int argc, char* argv[]) {
                 double transY = sin(rotationOffset) * transXrobot + cos(rotationOffset) * transYrobot;
 
 
-                
+
                 if (DEBUG) {
                     cout<<"transXODOM: "<<transX<<" transYODOM: "<<transY<<endl;
                 }
-                
+
                 //calculate index of bin for search in correlation
                 int searchIdxX = ((int) ((-transX / ((2*MAXLASERDIST) / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
                 int searchIdxY = ((int) ((-transY / ((2*MAXLASERDIST) / BINCOUNTDIST))+BINCOUNTDIST))%BINCOUNTDIST;
@@ -895,7 +908,7 @@ int main(int argc, char* argv[]) {
 
                 }
 
-                
+
 
                 int maximumIdxX = (searchIdxX + corrMaxX + BINCOUNTDIST) % BINCOUNTDIST;
                 int maximumIdxY = (searchIdxY + corrMaxY + BINCOUNTDIST) % BINCOUNTDIST;
@@ -929,7 +942,7 @@ int main(int argc, char* argv[]) {
                     transOffsetXOld = transOffsetX;
                     transOffsetYOld = transOffsetY;
                 }
- 
+
                 //translate scan
                 scan.translate(transOffsetX, transOffsetY);
                 //scan.translate(1, searchIdxY);

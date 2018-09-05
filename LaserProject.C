@@ -32,7 +32,7 @@
 
 #include <limits>
 
-#define BINCOUNT 400
+#define BINCOUNT 550
 
 #define BINCOUNTDIST 500
 
@@ -50,7 +50,7 @@
 
 #define UPDATEREFSCAN 1
 
-#define ALIGNAXES 10
+#define ALIGNAXES 5
 
 #define ALIGNMAXDIFF 5
 

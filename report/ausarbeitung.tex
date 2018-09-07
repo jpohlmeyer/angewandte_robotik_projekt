@@ -66,7 +66,7 @@
 
 % Wird zur Einbindung von Bildern benötigt
 \usepackage{graphicx}
-
+\graphicspath{{pictures/}}
 % Einbinden des Literaturverzeichnisses
 %\usepackage[backend=bibtex,style=numeric-comp]{biblatex}
 %\bibliography{literatur.bib}
@@ -99,61 +99,20 @@
 
 \input{hindernisvermeidung}
 
-\section{Winkelhistogramme}
+\input{winkelhistogramme}
 
-erster naiver ansatz (ohne rauschen)
+\input{korrelationDerWinkelhistogramme}
 
-berechne winkel der geraden wenn man einen scanpunkt mit dem nächsten verbindet (angle=atan2(y1-y2,x1-x2))
-umrechnen in grad
-einteilen in bins im histogramm (angle+180)/(360/BINCOUNT)
-zählen in den entsprechenden bins
+\input{rotationskorrektur}
 
-darstellen im histogramm fenster mit kreisen
+\input{hauptachsenalignenDerKarte}
 
-\section{Korrelation der Winkelhistogramme}
+\input{xyHistogramme}
 
-berechnen der korrelation zwischen dem aktuellen winkelhistogramm und dem vorherigen winkelhistogram
+\input{korrelationDerXYHistogramme}
 
-korrelationsformel: blub
+\input{translationskorrektur}
 
-einteilen der korrlationswerte in bins
-
-skalieren der grafischen ausgabe
-
-\section{Rotationskorrektur}
-
-zunächst nur mit odometriedaten korrigieren -> klappt nicht: globalen offset mit speichern und erhöhen weil in jedem schritt nur relativer offset berechnet wird
-
-dann finden des lokalen maximums der korrelation mithilfe der odometriedaten als ausgangspunkt für die suche
-
-erster ansatz: gleichzeitig nach links und nach rechts vom odometriepunkt suchen, bis ein wert gefunden wurde, der mindestens 50\% des maximalen korrelationswert hat. später hochgesetzt auf 2/3 des maximalen korrelationswert hochgesetzt -> idee: kein lokales maximum im rauschen finden sondern klares maximum finden
-
-funktioniert manchmal nicht ganz so gut, manchmal maxima nicht gefunden, da dies zu klein ist (spaeter durch rauschen vermutlich noch schlimmer)..
-
-neuer ansatz: in 15 grad um den odometriepunkt den maximalen punkt in der korrelation suchen -> besser
-
-entsprechend dem lokal maximalen bin der korrelation den scan rotieren und die rotation auf den globalen offset aufaddieren und den scan in die karte eintragen
-
-\section{Hauptachsenalignen der Karte}
-
-initiales setzen des rotationsoffset, sodass die wände der karte achsenaligned sind
-
-idee: berechnen des maximums im winkelhistogram und setzen des initialen offsets als korrespondierende drehung in radiant -> drehen des initialen scans vor dem einzeichnen in die karte
-
-durch den globalen rotationsoffset werden alle weiteren scans auch daran ausgerichtet
-
-\section{X/Y Histogramme}
-
-auf dem achsenalignten scan werden die scan punkte in ein x und ein y histogram eingetragen
-
-die größe der histogramme wird dabei an der maximalen laserdistanz ausgerichtet damit alle werte eingetragen werden können
-
-\section{Korrelation der x/y histogramme}
-
-erster ansatz: übertragen der lösung für die korrelation für die winkelhistogramme auf die x/y histogramme mit derselben formel
-
-\section{Translationskorrektur}
-
-erster ansatz: berechnen des lokalen maximums der korrelation ausgehen von dem odometrie wert als mittelpunkt -> does not really work right now...
+\input{parameteroptimierung}
 
 \end{document}

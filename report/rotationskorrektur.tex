@@ -1,0 +1,13 @@
+\section{Rotationskorrektur}
+
+zunächst nur mit odometriedaten korrigieren -> klappt nicht: globalen offset mit speichern und erhöhen weil in jedem schritt nur relativer offset berechnet wird
+
+dann finden des lokalen maximums der korrelation mithilfe der odometriedaten als ausgangspunkt für die suche
+
+erster ansatz: gleichzeitig nach links und nach rechts vom odometriepunkt suchen, bis ein wert gefunden wurde, der mindestens 50\% des maximalen korrelationswert hat. später hochgesetzt auf 2/3 des maximalen korrelationswert hochgesetzt -> idee: kein lokales maximum im rauschen finden sondern klares maximum finden
+
+funktioniert manchmal nicht ganz so gut, manchmal maxima nicht gefunden, da dies zu klein ist (spaeter durch rauschen vermutlich noch schlimmer)..
+
+neuer ansatz: in 15 grad um den odometriepunkt den maximalen punkt in der korrelation suchen -> besser
+
+entsprechend dem lokal maximalen bin der korrelation den scan rotieren und die rotation auf den globalen offset aufaddieren und den scan in die karte eintragen

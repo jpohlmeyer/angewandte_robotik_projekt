@@ -13,7 +13,7 @@ Da wir zunächst in einer Simulation getestet haben, in der wir perfekte Lasersc
 	\label{fig:Winkelberechnung}
 \end{figure}
 
-Der Winkel den man mit der oben ganannten Formel erhält wird in einen entsprechenden Bin im Histogramm umgerechnet, da dieses Diskret und nicht kontinuierlich ist. Dazu wurde folgende Formel verwendet, wobei BINCOUNT die gewählte Auflösung, also die Anzahl an Bins im Histogramm ist: $$\frac{(angle + 180) * BINCOUNT}{360}$$
+Der Winkel den man mit der oben ganannten Formel erhält wird in einen entsprechenden Bin im Histogramm umgerechnet, da dieses Diskret und nicht kontinuierlich ist. Dazu wurde folgende Formel verwendet, wobei BINCOUNT die Anzahl an Bins im Histogramm ist und damit die Auflösung bestimmt: $$\frac{(angle + 180) * BINCOUNT}{360}$$
 
 Im Histogramm wird dann letztendlich festgehalten, wie oft ein bestimmter Bin (bzw. Winkelbereich) im Scan auftritt. Dadurch werden im Grunde die Wände bzw. geraden Linien die der Laserscanner erfasst dargestellt, da Scanpunkte die auf einer geraden Linie liegen relativ zum Roboter im gleichen Winkel stehen und somit in den gleichen Bin im Histogramm eingeortnet werden. So entsteht im Histogramm Peaks bei den Winkeln, die die Wände relativ zum Roboter haben.
 

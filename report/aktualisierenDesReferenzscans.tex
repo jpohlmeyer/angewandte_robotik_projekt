@@ -1,10 +1,10 @@
 \subsection{Aktualisieren des Referenzscans (Janneke)}
 
-Ein Problem mit dem Ansatz liegt darin, dass sich über die Zeit Fehler aufsummieren und die Scans immer weiter vom original weg driften. Ein möglicher Ansatz um dem entgegenzuwirken ist es den Referenzscan nicht in jedem Schritt, sondern nur ab und zu zu wechseln. D.h. man arbeitet nicht mit dem aktuellen und dem Scan aus dem vorherigen Schritt, sondern mit dem aktuellen Scan und dem von vor beispielsweise 4 Schritten.
+Ein Problem mit dem Ansatz liegt darin, dass sich über die Zeit Fehler aufsummieren und die Scans immer weiter vom original weg driften. Ein möglicher Ansatz um dem entgegenzuwirken ist es den Referenzscan nicht in jedem Schritt, sondern nur ab und zu zu wechseln. D.h. man arbeitet nicht jedes mal mit dem aktuellen und dem Scan aus dem vorherigen Schritt, sondern immer mit dem aktuellen und dem zuletzt festgelegten Referenzscan.
 
 Also wird der Referenzscan, die "Referenz-"Odometrie und sowohl der globale Rotationsoffset, also auch der globale Translationsoffset nur alle x-Schritte mit den aktuellen Werten aktualisiert und nicht mehr am Ende jedes Schleifendurchgangs mit den aktuellen Werten überschieben. 
 
-Dies bringt einen weiteren Update-Parameter der optimiert werden muss. Diese Optimierung erwies sich als relativ schwierig, da wir bereits einen Count-Parameter haben der bestimmt wie oft das Karten-update überhaupt passiert. Der Count-Parameter ist wichtig, da bei einem Kartenupdate in jedem Schleifendurchgang der Roboter vermutlich mit den Scans nicht hinterherkommt (TODO besserformulieren). Es wäre auch möglich in die Schleife ein Sleep einzubauen um dieses Problem zu lösen, allerdings würde das auch die Hindernisvermeidung während dieser Zeit aussetzen. Letzendlich haben wir uns für eine Kombination der Ansätze entschieden: ein kurzer Sleep (100ms) in jedem Schleifendurchgang und ein Karten-update alle 4 Schleifen-Durchgänge.
+Dies bringt einen weiteren Update-Parameter der optimiert werden muss. Diese Optimierung erwies sich als relativ schwierig, da wir bereits einen COUNT-Parameter haben der bestimmt wie oft das Karten-update überhaupt passiert.
 
 \begin{figure}
 	\centering

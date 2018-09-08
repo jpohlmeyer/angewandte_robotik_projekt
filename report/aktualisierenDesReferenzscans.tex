@@ -1,14 +1,10 @@
-\section{Aktualisieren des Referenzscans (Janneke)}
+\subsection{Aktualisieren des Referenzscans (Janneke)}
 
 Ein Problem mit dem Ansatz liegt darin, dass sich über die Zeit Fehler aufsummieren und die Scans immer weiter vom original weg driften. Ein möglicher Ansatz um dem entgegenzuwirken ist es den Referenzscan nicht in jedem Schritt, sondern nur ab und zu zu wechseln. D.h. man arbeitet nicht mit dem aktuellen und dem Scan aus dem vorherigen Schritt, sondern mit dem aktuellen Scan und dem von vor beispielsweise 4 Schritten.
 
 Also wird der Referenzscan, die "Referenz-"Odometrie und sowohl der globale Rotationsoffset, also auch der globale Translationsoffset nur alle x-Schritte mit den aktuellen Werten aktualisiert und nicht mehr am Ende jedes Schleifendurchgangs mit den aktuellen Werten überschieben. 
 
 Dies bringt einen weiteren Update-Parameter der optimiert werden muss. Diese Optimierung erwies sich als relativ schwierig, da wir bereits einen Count-Parameter haben der bestimmt wie oft das Karten-update überhaupt passiert. Der Count-Parameter ist wichtig, da bei einem Kartenupdate in jedem Schleifendurchgang der Roboter vermutlich mit den Scans nicht hinterherkommt (TODO besserformulieren). Es wäre auch möglich in die Schleife ein Sleep einzubauen um dieses Problem zu lösen, allerdings würde das auch die Hindernisvermeidung während dieser Zeit aussetzen. Letzendlich haben wir uns für eine Kombination der Ansätze entschieden: ein kurzer Sleep (100ms) in jedem Schleifendurchgang und ein Karten-update alle 4 Schleifen-Durchgänge.
-
-Bei der Optimierung des Update-Parameter haben wir verschiedene Count- und Update-Parameterkombinationen getestet. Dabei war auffällig, dass bei einem selteneren Referenzscan-update das Verfahren schlechter funktioniert hat, wenn der Roboter engere Kurven gefahren ist, sich zum Beispiel in einer Sackgasse umgedreht hat. Dies ist dadurch zu erklären, dass der mehrere Scans alte Referenzscan und der aktuelle Scan wenig gleiche Teile des Raumes abdecken. Dadurch kann eine Korrelation der Beiden Scans nicht sinnvoll berechnet werden. Um dieses Problem ab zu mildern haben wir zunächst das Umdrehen des Roboters in einer Sackgasse blockierend um 180 Grad zu einem nicht blockierenden drehen auf der Stelle durch entgegengesetzte Radgeschwindigkeiten ersetzt. Außerdem haben wir insgesamt die Geschwindigkeit des Roboters reduziert, was sowohl der Version mit einem Referenzscan-Update in jedem Schritt als auch der mit weniger Updates geholfen hat.
-
-Letztendlich ergaben unsere Test, dass Unsere Implementation am besten funktioniert, wenn man entweder in jedem Schritt ein Karten-update ausführt, aber den Referenzscan nur alle zwei Schritte updatet (siehe Abbildung~\ref{fig:count1_r2_4min}), oder nur jeden 4. Schritt ein Karten-Update ausführt, dafür aber in jedem dieser Schritte auch den Referenzscan wechselt (siehe Abbildung~\ref{fig:count4_r1_4min}). Da die zweite Version etwas besser zu funktionieren schien verwenden wir diese.
 
 \begin{figure}
 	\centering
@@ -19,3 +15,7 @@ Letztendlich ergaben unsere Test, dass Unsere Implementation am besten funktioni
 	\caption{Karten-update alle 4 Schritte, Referenzscan wechsel jeden Schritt, 4min Fahrzeit}
 	\label{fig:count4_r1_4min}
 \end{figure}
+
+Bei der Optimierung des Update-Parameter haben wir verschiedene Count- und Update-Parameterkombinationen getestet. Dabei war auffällig, dass bei einem selteneren Referenzscan-update das Verfahren schlechter funktioniert hat, wenn der Roboter engere Kurven gefahren ist, sich zum Beispiel in einer Sackgasse umgedreht hat. Dies ist dadurch zu erklären, dass der mehrere Scans alte Referenzscan und der aktuelle Scan wenig gleiche Teile des Raumes abdecken. Dadurch kann eine Korrelation der Beiden Scans nicht sinnvoll berechnet werden. Um dieses Problem ab zu mildern haben wir zunächst das Umdrehen des Roboters in einer Sackgasse blockierend um 180 Grad zu einem nicht blockierenden drehen auf der Stelle durch entgegengesetzte Radgeschwindigkeiten ersetzt. Außerdem haben wir insgesamt die Geschwindigkeit des Roboters reduziert, was sowohl der Version mit einem Referenzscan-Update in jedem Schritt als auch der mit weniger Updates geholfen hat.
+
+Letztendlich ergaben unsere Test, dass Unsere Implementation am besten funktioniert, wenn man entweder in jedem Schritt ein Karten-update ausführt, aber den Referenzscan nur alle zwei Schritte updatet (siehe Abbildung~\ref{fig:count1_r2_4min}), oder nur jeden 4. Schritt ein Karten-Update ausführt, dafür aber in jedem dieser Schritte auch den Referenzscan wechselt (siehe Abbildung~\ref{fig:count4_r1_4min}). Da die zweite Version etwas besser zu funktionieren schien verwenden wir diese.

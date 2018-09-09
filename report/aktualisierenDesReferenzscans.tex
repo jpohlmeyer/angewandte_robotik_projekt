@@ -8,14 +8,11 @@ Dies bringt einen weiteren Update-Parameter der optimiert werden muss. Diese Opt
 
 \begin{figure}
 	\centering
-	\includegraphics[width=14cm]{refTest_c1_r2_4min_2}
-	\caption{Karten-update jeden Schritt, Referenzscan wechsel alle 2 Schritte, 4min Fahrzeit\newline}
-	\label{fig:count1_r2_4min}
-	\includegraphics[width=14cm]{refTest_c4_r1_4min}
-	\caption{Karten-update alle 4 Schritte, Referenzscan wechsel jeden Schritt, 4min Fahrzeit}
-	\label{fig:count4_r1_4min}
+	\includegraphics[width=14cm]{refTest_c1_r2LINKS_c4_r1RECHTS_4min}
+	\caption{Links: Karten-update jeden Schritt, Referenzscan wechsel alle 2 Schritte, 4min Fahrzeit; Rechts: Karten-update alle 4 Schritte, Referenzscan wechsel jeden Schritt, 4min Fahrzeit\newline}
+	\label{fig:refTest}
 \end{figure}
 
 Bei der Optimierung des Update-Parameter haben wir verschiedene Count- und Update-Parameterkombinationen getestet. Dabei war auffällig, dass bei einem selteneren Referenzscan-update das Verfahren schlechter funktioniert hat, wenn der Roboter engere Kurven gefahren ist, sich zum Beispiel in einer Sackgasse umgedreht hat. Dies ist dadurch zu erklären, dass der mehrere Scans alte Referenzscan und der aktuelle Scan wenig gleiche Teile des Raumes abdecken. Dadurch kann eine Korrelation der Beiden Scans nicht sinnvoll berechnet werden. Um dieses Problem ab zu mildern haben wir zunächst das Umdrehen des Roboters in einer Sackgasse blockierend um 180 Grad zu einem nicht blockierenden drehen auf der Stelle durch entgegengesetzte Radgeschwindigkeiten ersetzt. Außerdem haben wir insgesamt die Geschwindigkeit des Roboters reduziert, was sowohl der Version mit einem Referenzscan-Update in jedem Schritt als auch der mit weniger Updates geholfen hat.
 
-Letztendlich ergaben unsere Test, dass Unsere Implementation am besten funktioniert, wenn man entweder in jedem Schritt ein Karten-update ausführt, aber den Referenzscan nur alle zwei Schritte updatet (siehe Abbildung~\ref{fig:count1_r2_4min}), oder nur jeden 4. Schritt ein Karten-Update ausführt, dafür aber in jedem dieser Schritte auch den Referenzscan wechselt (siehe Abbildung~\ref{fig:count4_r1_4min}). Da die zweite Version etwas besser zu funktionieren schien verwenden wir diese.
+Letztendlich ergaben unsere Test, dass Unsere Implementation am besten funktioniert, wenn man entweder in jedem Schritt ein Karten-update ausführt, aber den Referenzscan nur alle zwei Schritte updatet (siehe Abbildung~\ref{fig:refTest} links), oder nur jeden 4. Schritt ein Karten-Update ausführt, dafür aber in jedem dieser Schritte auch den Referenzscan wechselt (siehe Abbildung~\ref{fig:refTest} rechts). Da die zweite Version etwas besser zu funktionieren schien verwenden wir diese.

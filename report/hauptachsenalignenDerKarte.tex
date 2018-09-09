@@ -2,7 +2,7 @@
 
 Bisher haben wir die Translation der Karte um andere Bewegungen des Roboters auszugleichen noch gar nicht beachtet. Hierfür können X- und Y-Histogramme verwendet werden. Um ein X- bzw. Y-Histogramm zu erstellen muss allerdings der Scan hauptachsenaligned sein. Das heißt, dass die Wände bzw. geraden Linien im Scan parallel zur X- oder Y-Achse liegen müssen.
 
-Dies könnte man nur für die Erstellung der Histogramme in jedem Schritt für jeden Scan einzeln machen, wir haben uns jedoch dafür entschieden unseren initialen Scan so auszurichten da dann jeder weitere Scan durch die Rotationskorrektur auf den ersten Scan ausgerichtet wird und damit automatisch auch auf die Hauptachsen ausgerichtet wird.
+Dies könnte man nur für die Erstellung der Histogramme in jedem Schritt für jeden Scan einzeln machen, wir haben uns jedoch anders als im Paper dafür entschieden unseren initialen Scan so auszurichten da dann jeder weitere Scan durch die Rotationskorrektur auf den ersten Scan ausgerichtet wird und damit automatisch auch auf die Hauptachsen ausgerichtet wird.
 
 Also suchen wir das Maximum im Winkelhistogramm des ersten Scans, welches der prominentesten Wand entsprechen würde. Dann rotieren wir den Scan so, dass der berechnete Winkel auf die Null im Histogramm verschoben wird. Diese Rotation setzen wir nun als initialen Rotationsoffset. Der rotierte Scan wird dann in die Karte eingezeichnet, sodass unsere resultierende Karte auch direkt hauptachsenaligned ist.
 

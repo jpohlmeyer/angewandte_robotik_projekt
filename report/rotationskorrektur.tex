@@ -1,4 +1,4 @@
-\section{Rotationskorrektur (Janneke)}
+\subsection{Rotationskorrektur (Janneke)}
 
 Nach dem wir im letzten Kapitel die relative Rotation der Scans berechnet haben wollen wir nun den aktuellen Scan so rotieren, dass er in die Karte mit der richtigen Rotation eingetragen werden kann. Da sich der Roboter bei der Exploration nicht nur im Kreis dreht sondern auch fährt ist das Korrelationsmaximum nicht unbedingt eindeutig. Daher wird die Odometrie verwendet um das richtige Korrelationsmaximum zu finden. Um Fehler auszuschließen haben wir daher zunächst nur die Rotation die wir aus der Odometrie erhalten haben verwendet und den Scan anhand dessen rotiert. Dies hat jedoch nur beim ersten Schritt funktioniert, da wir nicht bedacht haben, dass dir so berechnete Rotation nur zum letzten Scan ist, welcher aber ja bzgl. des davor auch schon rotiert sein kann. Wir mussten also diese relative Rotation in eine globale Rotation bzgl. des ersten Scans umrechnen. Dies haben wir gelöst indem wir einen globalen Offset gespeichert haben der dann um die relative Rotation verändert wurde.
 
